@@ -181,6 +181,17 @@ function setAccessMode(mode) {
     showAccessFeedback("");
 }
 
+function updateGuestGreeting() {
+    const profile = getStoredAccessProfile();
+    const greetingElement = document.getElementById("guest-greeting");
+    if (profile && profile.type === "guest" && profile.name) {
+        greetingElement.innerHTML = `Hola, ${profile.name} <i class="fa-solid fa-heart" style="color: var(--color-dorado); font-size: 0.8em; margin-left: 0.3rem;"></i>`;
+        greetingElement.hidden = false;
+    } else {
+        greetingElement.hidden = true;
+    }
+}
+
 function handleGuestAccess(event) {
     event.preventDefault();
 
@@ -200,6 +211,7 @@ function handleGuestAccess(event) {
 
     saveAccessProfile(profile);
     createPersonalAlbum(guestName);
+    updateGuestGreeting();
     closeAccessModal();
 }
 
@@ -217,10 +229,13 @@ function handleAdminAccess(event) {
         type: "admin",
         enteredAt: new Date().toISOString()
     });
+    updateGuestGreeting();
     closeAccessModal();
 }
 
 function initializeAccessFlow() {
+    updateGuestGreeting();
+
     if (getStoredAccessProfile()) {
         closeAccessModal();
         return;
@@ -245,7 +260,9 @@ function formatTime(value) {
 
 function showPostEventContent() {
     document.getElementById("post-event-message").hidden = false;
-    document.getElementById("centro-recuerdos-preview").hidden = false;
+    const previewSection = document.getElementById("centro-recuerdos-preview");
+    previewSection.hidden = false;
+    previewSection.classList.add("fade-in");
 }
 
 function updateCountdown() {
@@ -276,34 +293,92 @@ if (updateCountdown()) {
     intervalo = setInterval(updateCountdown, 1000);
 }
 
-// --- 5. LÓGICA DEL REPRODUCTOR DE MÚSICA (CON AUTOPLAY) ---
+// --- 5. LÓGICA DEL REPRODUCTOR DE MÚSICA (CON PLAYLIST Y CONTROLES) ---
 const audio = document.getElementById("bg-music");
 const playBtn = document.getElementById("play-music-btn");
+const prevBtn = document.getElementById("player-prev-btn");
+const nextBtn = document.getElementById("player-next-btn");
+const volumeSlider = document.getElementById("player-volume-slider");
+const volumeIcon = document.getElementById("player-volume-icon");
+const trackTitle = document.getElementById("player-track-title");
+const trackArtist = document.getElementById("player-track-artist");
+
+let currentTrackIndex = 0;
 let isPlaying = false;
 
-// Función para alternar el botón de la música
-function toggleMusic() {
-    if (isPlaying) {
-        audio.pause();
-        playBtn.innerHTML = '<i class="fa-solid fa-play"></i> Reproducir Música';
-    } else {
-        audio.play();
-        playBtn.innerHTML = '<i class="fa-solid fa-pause"></i> Pausar Música';
-    }
-    isPlaying = !isPlaying;
+function loadTrack(index) {
+    const track = eventConfig.musicPlaylist[index];
+    audio.src = track.file;
+    trackTitle.textContent = track.title;
+    trackArtist.textContent = track.artist;
 }
 
-// Escuchar el clic en el botón
-playBtn.addEventListener("click", toggleMusic);
+function playTrack() {
+    audio.play().then(() => {
+        isPlaying = true;
+        playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+    }).catch(error => console.log("Error al reproducir:", error));
+}
 
-// Truco para el Autoplay: Arranca la música al primer clic o toque en la pantalla
-document.body.addEventListener("click", function() {
+function pauseTrack() {
+    audio.pause();
+    isPlaying = false;
+    playBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+}
+
+function nextTrack() {
+    currentTrackIndex = (currentTrackIndex + 1) % eventConfig.musicPlaylist.length;
+    loadTrack(currentTrackIndex);
+    if (isPlaying) playTrack();
+}
+
+function prevTrack() {
+    currentTrackIndex = (currentTrackIndex - 1 + eventConfig.musicPlaylist.length) % eventConfig.musicPlaylist.length;
+    loadTrack(currentTrackIndex);
+    if (isPlaying) playTrack();
+}
+
+// Event Listeners
+playBtn.addEventListener("click", () => {
+    if (isPlaying) pauseTrack();
+    else playTrack();
+});
+
+prevBtn.addEventListener("click", prevTrack);
+nextBtn.addEventListener("click", nextTrack);
+
+volumeSlider.addEventListener("input", (e) => {
+    audio.volume = e.target.value;
+    updateVolumeIcon(e.target.value);
+});
+
+volumeIcon.addEventListener("click", () => {
+    if (audio.muted) {
+        audio.muted = false;
+        updateVolumeIcon(audio.volume);
+    } else {
+        audio.muted = true;
+        volumeIcon.className = "fa-solid fa-volume-xmark";
+    }
+});
+
+function updateVolumeIcon(volume) {
+    if (volume == 0) {
+        volumeIcon.className = "fa-solid fa-volume-off";
+    } else if (volume < 0.5) {
+        volumeIcon.className = "fa-solid fa-volume-low";
+    } else {
+        volumeIcon.className = "fa-solid fa-volume-high";
+    }
+}
+
+// Autoplay al primer toque
+document.body.addEventListener("click", () => {
     if (!isPlaying) {
-        audio.play().then(() => {
-            isPlaying = true;
-            playBtn.innerHTML = '<i class="fa-solid fa-pause"></i> Pausar Música';
-        }).catch((error) => {
-            console.log("El navegador bloqueó el autoplay", error);
-        });
+        playTrack();
     }
 }, { once: true });
+
+// Inicializar primer track
+loadTrack(currentTrackIndex);
+audio.volume = volumeSlider.value;

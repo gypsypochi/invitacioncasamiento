@@ -269,7 +269,7 @@ Esta etapa se enfoca en construir, pulir y validar toda la interfaz de usuario, 
 - **Criterio de finalización:** Modales y contenedores base maquetados, carga condicional de scripts de Firebase lista, y datos locales de sesión simulada persistiendo correctamente en el navegador.
 
 #### Sprint 2: Pulido Frontend y UX
-- **Estado:** Pendiente
+- **Estado:** Completado
 - **Objetivo:** Mejorar y refinar la experiencia visual sin agregar backend ni bases de datos dinámicas.
 - **Descripción:** Reemplazo de emojis, adición de transiciones estéticas, aplicación rigurosa de la paleta oficial y optimización del reproductor musical.
 - **Lista de Issues:**

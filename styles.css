@@ -300,32 +300,85 @@ button, a {
     font-style: italic;
 }
 
+.guest-greeting {
+    font-size: 1.4rem;
+    color: var(--color-texto);
+    margin-bottom: 1.25rem;
+    font-weight: 600;
+    letter-spacing: 0.05rem;
+    font-family: var(--font-textos);
+    animation: bounceIn 1s ease-out;
+}
+
+@keyframes bounceIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.3);
+    }
+    50% {
+        opacity: 0.9;
+        transform: scale(1.05);
+    }
+    80% {
+        transform: scale(0.97);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
 .memories-cards {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1.25rem;
+    gap: 1.5rem;
     max-width: 68rem;
     margin: 0 auto;
 }
 
 .memory-card {
+    border: 0.0625rem solid rgba(197, 160, 89, 0.2);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    padding: 2.2rem 1.5rem;
+    opacity: 0.9;
+    cursor: pointer;
+    transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.35s cubic-bezier(0.25, 1, 0.5, 1), border-color 0.35s ease, opacity 0.35s ease;
+}
+
+/* Alternancia de color crema/violeta suave */
+.memory-card:nth-child(odd) {
     background-color: var(--color-blanco);
-    border: 0.0625rem solid #ddd;
-    box-shadow: 0 0.625rem 1.875rem rgba(0,0,0,0.03);
-    padding: 2rem 1.25rem;
-    opacity: 0.72;
-    cursor: default;
+}
+
+.memory-card:nth-child(even) {
+    background-color: rgba(197, 161, 230, 0.15); /* Violeta muy suave (lavanda con opacidad) */
+    border-color: rgba(197, 161, 230, 0.3);
+}
+
+.memory-card:hover {
+    transform: translateY(-10px) scale(1.03);
+    box-shadow: 0 15px 35px rgba(197, 160, 89, 0.15);
+    opacity: 1;
+    border-color: var(--color-dorado);
+    background-color: var(--color-blanco);
 }
 
 .memory-card-icon {
     display: block;
-    font-size: 2rem;
-    margin-bottom: 1rem;
+    font-size: 2.2rem;
+    margin-bottom: 1.25rem;
+    color: var(--color-dorado);
+    transition: transform 0.3s ease;
+}
+
+.memory-card:hover .memory-card-icon {
+    transform: scale(1.15) rotate(5deg);
 }
 
 .memory-card h3 {
-    font-size: 1.15rem;
-    margin-bottom: 0.75rem;
+    font-size: 1.2rem;
+    margin-bottom: 0.85rem;
     font-weight: 600;
 }
 
@@ -333,7 +386,7 @@ button, a {
     color: #555;
     font-size: 0.95rem;
     font-style: italic;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1.5rem;
 }
 
 .coming-soon-label {
@@ -342,13 +395,181 @@ button, a {
     color: var(--color-dorado);
     font-size: 0.75rem;
     letter-spacing: 0.0625rem;
-    padding: 0.35rem 0.65rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
     text-transform: uppercase;
+    background-color: rgba(255, 255, 255, 0.4);
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.memory-card:hover .coming-soon-label {
+    background-color: var(--color-dorado);
+    color: var(--color-blanco);
+}
+
+/* Transición de revelado con animación */
+.fade-in {
+    animation: fadeInUp 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --- 13. REPRODUCTOR MUSICAL DE PLAYLIST --- */
+.music-player {
+    background: rgba(255, 255, 255, 0.88);
+    border: 0.0625rem solid var(--color-dorado);
+    border-radius: 28px;
+    padding: 1rem 1.75rem;
+    max-width: 24rem;
+    width: 100%;
+    margin: 1.875rem auto 0 auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.625rem;
+    animation: fadeInUp 1s ease-out;
+}
+
+.player-track-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.track-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-texto);
+    font-family: var(--font-textos);
+    letter-spacing: 0.02rem;
+}
+
+.track-artist {
+    font-size: 0.85rem;
+    color: #666;
+    font-style: italic;
+    margin-top: 0.125rem;
+}
+
+.player-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+}
+
+.btn-player-control {
+    background: transparent;
+    border: none;
+    color: var(--color-dorado);
+    font-size: 1.25rem;
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: color 0.2s, transform 0.2s;
+}
+
+.btn-player-control:hover {
+    color: var(--color-texto);
+    transform: scale(1.15);
+}
+
+.btn-player-control:active {
+    transform: scale(0.95);
+}
+
+.btn-player-play {
+    background: var(--color-dorado);
+    border: none;
+    color: var(--color-blanco);
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(197, 160, 89, 0.3);
+    transition: background-color 0.25s, transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-player-play:hover {
+    background-color: var(--color-texto);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    transform: scale(1.08);
+}
+
+.btn-player-play:active {
+    transform: scale(0.95);
+}
+
+.player-volume-container {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    width: 85%;
+    justify-content: center;
+    margin-top: 0.125rem;
+}
+
+.player-volume-container i {
+    color: var(--color-dorado);
+    font-size: 0.95rem;
+    cursor: pointer;
+    width: 1.5rem;
+    text-align: center;
+    transition: color 0.2s;
+}
+
+.player-volume-container i:hover {
+    color: var(--color-texto);
+}
+
+.volume-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    max-width: 8rem;
+    height: 4px;
+    border-radius: 2px;
+    background: #e2d9cc;
+    outline: none;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--color-dorado);
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+    background: var(--color-texto);
+    transform: scale(1.2);
 }
 
 @media (max-width: 900px) {
     .memories-cards {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1.25rem;
     }
 }
 
@@ -363,6 +584,12 @@ button, a {
 
     .memories-cards {
         grid-template-columns: 1fr;
+        gap: 1.25rem;
+    }
+
+    .music-player {
+        padding: 0.85rem 1.25rem;
+        max-width: 20rem;
     }
 }
 
