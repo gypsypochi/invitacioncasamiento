@@ -261,3 +261,107 @@ button, a {
     font-size: 3.5rem;
     margin-bottom: 0.625rem; 
 }
+
+/* --- 11. CENTRO DE RECUERDOS (Próximamente) --- */
+.post-event-message {
+    max-width: 46rem;
+    margin: 2.5rem auto 0 auto;
+    font-size: 1.1rem;
+    font-style: italic;
+    color: var(--color-texto);
+}
+
+.post-event-message p {
+    margin-bottom: 0.75rem;
+}
+
+.post-event-highlight {
+    color: var(--color-dorado);
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.memories-preview {
+    padding-top: 0;
+}
+
+.memories-header {
+    max-width: 42rem;
+    margin: 0 auto 2.5rem auto;
+}
+
+.memories-header h2 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.memories-header p {
+    font-size: 1.2rem;
+    font-style: italic;
+}
+
+.memories-cards {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.25rem;
+    max-width: 68rem;
+    margin: 0 auto;
+}
+
+.memory-card {
+    background-color: var(--color-blanco);
+    border: 0.0625rem solid #ddd;
+    box-shadow: 0 0.625rem 1.875rem rgba(0,0,0,0.03);
+    padding: 2rem 1.25rem;
+    opacity: 0.72;
+    cursor: default;
+}
+
+.memory-card-icon {
+    display: block;
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.memory-card h3 {
+    font-size: 1.15rem;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
+
+.memory-card p {
+    color: #555;
+    font-size: 0.95rem;
+    font-style: italic;
+    margin-bottom: 1.25rem;
+}
+
+.coming-soon-label {
+    display: inline-block;
+    border: 0.0625rem solid var(--color-dorado);
+    color: var(--color-dorado);
+    font-size: 0.75rem;
+    letter-spacing: 0.0625rem;
+    padding: 0.35rem 0.65rem;
+    text-transform: uppercase;
+}
+
+@media (max-width: 900px) {
+    .memories-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 560px) {
+    .post-event-message {
+        font-size: 1rem;
+    }
+
+    .memories-header h2 {
+        font-size: 2.5rem;
+    }
+
+    .memories-cards {
+        grid-template-columns: 1fr;
+    }
+}
