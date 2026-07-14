@@ -1,5 +1,5 @@
 // --- 1. CONFIGURACIÓN DE LA FECHA DE LA BODA ---
-const fechaBoda = new Date("June 27, 2026 21:00:00").getTime();
+const fechaBoda = new Date("June 27, 2026 20:40:00").getTime();
 
 // --- 2. LÓGICA DE LA CUENTA REGRESIVA ---
 const intervalo = setInterval(function() {
