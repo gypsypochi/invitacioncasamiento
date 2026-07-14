@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Marcela y Jorge - ¡Nos casamos!</title>
+    <title>Invitación de casamiento</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,16 +19,50 @@
         <source src="assets/unchained melody.mp3" type="audio/mpeg">
     </audio>
 
+    <div id="access-modal" class="access-modal" role="dialog" aria-modal="true" aria-labelledby="access-modal-title">
+        <div class="access-modal-card">
+            <p class="access-modal-kicker">Centro de Recuerdos</p>
+            <h2 id="access-modal-title">❤️ Bienvenidos nuevamente</h2>
+            <p class="access-modal-text">Nuestro casamiento ya forma parte de nuestros recuerdos.</p>
+            <p class="access-modal-text">Elegí cómo querés ingresar para comenzar a revivir este momento junto a nosotros.</p>
+
+            <div class="access-options" aria-label="Opciones de ingreso">
+                <button id="guest-access-option" class="access-option active" type="button">👥 Soy invitado</button>
+                <button id="admin-access-option" class="access-option" type="button">💍 Somos los novios</button>
+            </div>
+
+            <form id="guest-access-form" class="access-form">
+                <p class="access-form-question">¿Cómo querés que aparezca tu álbum?</p>
+                <label for="guest-name">Nombre</label>
+                <input id="guest-name" name="guest-name" type="text" autocomplete="name" required>
+
+                <label for="event-code">Código del evento</label>
+                <input id="event-code" name="event-code" type="text" autocomplete="off" required>
+
+                <button class="btn-rectangular" type="submit">Ingresar</button>
+            </form>
+
+            <form id="admin-access-form" class="access-form" hidden>
+                <label for="admin-code">Código administrador</label>
+                <input id="admin-code" name="admin-code" type="text" autocomplete="off" required>
+
+                <button class="btn-rectangular" type="submit">Ingresar como administrador</button>
+            </form>
+
+            <p id="access-feedback" class="access-feedback" aria-live="polite"></p>
+        </div>
+    </div>
+
     <header id="hero" class="section">
         <div class="hero-content">
-            <h1 class="nombres">Marcela y Jorge</h1>
-            <p class="fecha-destacada">27 . 06 . 2026</p>
+            <h1 id="couple-names" class="nombres"></h1>
+            <p id="hero-date" class="fecha-destacada"></p>
             <button id="play-music-btn" class="btn-minimalista"><i class="fa-solid fa-pause"></i> Pausar Música</button>
         </div>
     </header>
 
     <section id="countdown-section" class="section">
-        <p class="intro-text">Queremos celebrar junto a vos este momento tan especial para nosotros...</p>
+        <p id="intro-text" class="intro-text"></p>
         
         <div id="countdown-timer">
             <div class="time-box"><span id="dias">00</span><p>Días</p></div>
@@ -36,70 +70,104 @@
             <div class="time-box"><span id="minutos">00</span><p>Minutos</p></div>
             <div class="time-box"><span id="segundos">00</span><p>Segundos</p></div>
         </div>
+
+        <div id="post-event-message" class="post-event-message" hidden>
+            <p class="post-event-highlight">❤️ Nuestro gran día ya forma parte de nuestros recuerdos.</p>
+            <p>Gracias por acompañarnos en uno de los momentos más importantes de nuestras vidas.</p>
+            <p>Muy pronto vas a poder revivir cada foto, cada video y cada recuerdo compartido junto a nosotros.</p>
+        </div>
+    </section>
+
+    <section id="centro-recuerdos-preview" class="section memories-preview bg-lavanda" hidden>
+        <div class="memories-header">
+            <h2>✨ Reviví nuestro gran día</h2>
+            <p>Muy pronto vas a poder recorrer todos los recuerdos compartidos por familiares y amigos.</p>
+        </div>
+
+        <div class="memories-cards">
+            <article class="memory-card" aria-disabled="true">
+                <span class="memory-card-icon" aria-hidden="true">📸</span>
+                <h3>Álbumes de invitados</h3>
+                <p>Cada invitado tendrá su propio álbum para compartir sus mejores recuerdos.</p>
+                <span class="coming-soon-label">Disponible próximamente</span>
+            </article>
+
+            <article class="memory-card" aria-disabled="true">
+                <span class="memory-card-icon" aria-hidden="true">👰</span>
+                <h3>Álbum oficial</h3>
+                <p>Las fotografías profesionales del casamiento estarán disponibles aquí.</p>
+                <span class="coming-soon-label">Disponible próximamente</span>
+            </article>
+
+            <article class="memory-card" aria-disabled="true">
+                <span class="memory-card-icon" aria-hidden="true">💬</span>
+                <h3>Mensajes</h3>
+                <p>Un espacio para dejar saludos, recuerdos y palabras para los novios.</p>
+                <span class="coming-soon-label">Disponible próximamente</span>
+            </article>
+
+            <article class="memory-card" aria-disabled="true">
+                <span class="memory-card-icon" aria-hidden="true">▶</span>
+                <h3>Presentación</h3>
+                <p>Disfrutá una presentación automática con los mejores momentos del casamiento.</p>
+                <span class="coming-soon-label">Disponible próximamente</span>
+            </article>
+        </div>
     </section>
 
     <section id="eventos" class="section">
-       <!--  <div class="card-evento">
-            <img src="assets/img-3.png" alt="Dibujo Glorieta" class="img-evento">
-            <h2>Civil</h2>
-            <p class="fecha">01 de junio</p>
-            <p class="hora">13:00 hs.</p>
-            <p class="lugar">Glorieta de Barrancas de Belgrano</p>
-            <p class="indicaciones">Clickeá en el botón y recibí las indicaciones para llegar.</p>
-            <a href="https://maps.app.goo.gl/NeE9KdY1AmCFJdmR8" class="btn-rectangular" target="_blank">CÓMO LLEGAR</a>
-        </div>
--->
         <div class="card-evento">
             <img src="assets/img-2.png" alt="Dibujo Palacio" class="img-evento">
-            <h2>Fiesta</h2>
-            <p class="fecha">27 de junio</p>
-            <p class="hora">20:40 hs.</p>
-            <p class="lugar">New Palace Eventos</p>
-            <p class="indicaciones">Clickeá en el botón y recibí las indicaciones para llegar.</p>
-            <p class="esperamos">Por favor, se puntual, Te esperamos!</p>
-            <a href="https://maps.app.goo.gl/K9eTUre2XknShAeo7" class="btn-rectangular" target="_blank">CÓMO LLEGAR</a>
+            <h2 id="event-title"></h2>
+            <p id="event-date" class="fecha"></p>
+            <p id="event-time" class="hora"></p>
+            <p id="event-venue" class="lugar"></p>
+            <p id="event-directions-text" class="indicaciones"></p>
+            <p id="event-punctuality-text" class="esperamos"></p>
+            <a id="maps-link" class="btn-rectangular" target="_blank"></a>
         </div>
     </section>
 
     <section id="dress-code" class="section bg-lavanda">
         <i class="fa-brands fa-black-tie icon-evento"></i>
-        <h2>Dress Code</h2>
-        <p class="frase-dresscode">"Nos encantaría verte con tus mejores galas para esta noche tan especial"</p>
-        <p class="codigo-vestimenta">FORMAL ELEGANTE</p>
+        <h2 id="dress-code-title"></h2>
+        <p id="dress-code-text" class="frase-dresscode"></p>
+        <p id="dress-code-value" class="codigo-vestimenta"></p>
     </section>
 
     <section id="asistencia" class="section">
         <i class="fa-solid fa-envelope-open-text icon-evento"></i>
-        <h2>Confirmación de Asistencia</h2>
-        <p>Esperamos que seas parte de esta gran celebración. ¡Confirmanos tu asistencia!</p>
-        <a href="https://docs.google.com/forms/d/e/1FAIpQLSecEPbrfnRB-UrCt4vSvN3sTsqWSDOY8Ww58fOYRZjwCuLNAA/viewform?usp=publish-editor" class="btn-rectangular" target="_blank">CONFIRMAR ASISTENCIA</a>
+        <h2 id="rsvp-title"></h2>
+        <p id="rsvp-text"></p>
+        <a id="rsvp-link" class="btn-rectangular" target="_blank"></a>
         
-        <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=Casamiento+Marcela+y+Jorge&dates=20260627T210000/20260628T050000&details=¡Te+esperamos+para+celebrar+nuestra+boda!&location=New+Palace+Eventos" class="btn-rectangular btn-secundario" target="_blank">AGENDAR EVENTO</a>
+        <a id="calendar-link" class="btn-rectangular btn-secundario" target="_blank"></a>
     </section>
 
     <section id="regalos" class="section bg-lavanda">
         <i class="fa-solid fa-gift icon-evento"></i>
-        <h2>Mesa de Regalos</h2>
-        <p class="intro-text">El mejor regalo es tu presencia. Pero si deseas hacernos un presente, podés colaborar con nuestra luna de miel:</p>
+        <h2 id="gifts-title"></h2>
+        <p id="gift-text" class="intro-text"></p>
         <div class="datos-bancarios">
-            <p><strong>CBU:</strong> 0070234030004025989626</p>
-            <p><strong>Alias:</strong> COLOR.COATI.YERBA</p>
-            <p><strong>Titular:</strong> Jorge A. Claros</p>
+            <p><strong>CBU:</strong> <span id="bank-cbu"></span></p>
+            <p><strong>Alias:</strong> <span id="bank-alias"></span></p>
+            <p><strong>Titular:</strong> <span id="bank-holder"></span></p>
         </div>
     </section>
 
     <section id="musica-sugerida" class="section">
         <i class="fa-solid fa-music icon-evento"></i>
-        <h2>¿Qué canciones no pueden faltar?</h2>
-        <p>¡Ayudanos agregando las canciones que pensás que no pueden faltar en la fiesta a nuestra lista!</p>
-        <a href="https://open.spotify.com/playlist/2vW8MZfzzfk0heseMr7LKu?si=ff52de9f1c2c46f3&pt=5571456815580f3776fecae7ad71fd17" class="btn-rectangular" target="_blank">AGREGAR A SPOTIFY</a>
+        <h2 id="music-title"></h2>
+        <p id="music-text"></p>
+        <a id="spotify-link" class="btn-rectangular" target="_blank"></a>
     </section>
 
     <footer id="footer" class="section">
-        <h2 class="nombres">Marcela y Jorge</h2>
-        <p class="agradecimiento">Gracias por acompañarnos y compartir nuestra felicidad...</p>
+        <h2 id="footer-names" class="nombres"></h2>
+        <p id="footer-text" class="agradecimiento"></p>
     </footer>
 
     <script src="script.js"></script>
+    <script type="module" src="firebase-config.js"></script>
 </body>
 </html>
