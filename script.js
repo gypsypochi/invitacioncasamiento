@@ -100,26 +100,44 @@ applyEventConfig();
 
 // --- 3. LÓGICA DE LA CUENTA REGRESIVA ---
 const fechaBoda = new Date(eventConfig.event.dateTime).getTime();
+let intervalo;
 
-const intervalo = setInterval(function() {
+function formatTime(value) {
+    return value < 10 ? "0" + value : value;
+}
+
+function showPostEventContent() {
+    document.getElementById("post-event-message").hidden = false;
+    document.getElementById("centro-recuerdos-preview").hidden = false;
+}
+
+function updateCountdown() {
     const ahora = new Date().getTime();
     const distancia = fechaBoda - ahora;
+    const tiempoRestante = Math.max(distancia, 0);
 
-    const dias = Math.floor(distancia / (1000 * 60 * 60 * 24));
-    const horas = Math.floor((distancia % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutos = Math.floor((distancia % (1000 * 60 * 60)) / (1000 * 60));
-    const segundos = Math.floor((distancia % (1000 * 60)) / 1000);
+    const dias = Math.floor(tiempoRestante / (1000 * 60 * 60 * 24));
+    const horas = Math.floor((tiempoRestante % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutos = Math.floor((tiempoRestante % (1000 * 60 * 60)) / (1000 * 60));
+    const segundos = Math.floor((tiempoRestante % (1000 * 60)) / 1000);
 
-    document.getElementById("dias").innerText = dias < 10 ? "0" + dias : dias;
-    document.getElementById("horas").innerText = horas < 10 ? "0" + horas : horas;
-    document.getElementById("minutos").innerText = minutos < 10 ? "0" + minutos : minutos;
-    document.getElementById("segundos").innerText = segundos < 10 ? "0" + segundos : segundos;
+    document.getElementById("dias").innerText = formatTime(dias);
+    document.getElementById("horas").innerText = formatTime(horas);
+    document.getElementById("minutos").innerText = formatTime(minutos);
+    document.getElementById("segundos").innerText = formatTime(segundos);
 
-    if (distancia < 0) {
+    if (distancia <= 0) {
+        showPostEventContent();
         clearInterval(intervalo);
-        document.getElementById("countdown-timer").innerHTML = "<h3 style='font-size: 2rem; color: var(--color-dorado);'>¡Llegó el gran día!</h3>";
+        return false;
     }
-}, 1000);
+
+    return true;
+}
+
+if (updateCountdown()) {
+    intervalo = setInterval(updateCountdown, 1000);
+}
 
 // --- 4. LÓGICA DEL REPRODUCTOR DE MÚSICA (CON AUTOPLAY) ---
 const audio = document.getElementById("bg-music");
