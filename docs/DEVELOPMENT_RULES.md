@@ -25,7 +25,61 @@ Principios principales:
 
 ---
 
-## 3. Flujo de trabajo
+## 3. Metodología de desarrollo (Flujo oficial)
+
+El proyecto se desarrollará de forma estrictamente incremental e iterativa estructurado mediante **Sprints**. Para garantizar la calidad y orden en la evolución de la plataforma, se prohíbe mezclar el desarrollo visual de la interfaz con la integración de backend, dividiendo el trabajo claramente en dos etapas (Etapa 1: Frontend completo, Etapa 2: Integración con Firebase y backend).
+
+El desarrollo de cualquier cambio debe seguir rigurosamente el siguiente flujo oficial:
+
+1. **Seleccionar Sprint:** Identificar el Sprint activo en el Roadmap.
+2. **Seleccionar Issue:** Tomar un único Issue del Sprint actual para su resolución.
+3. **Analizar:** Investigar el contexto, código existente y archivos implicados.
+4. **Explicar el plan:** Presentar detalladamente al usuario el enfoque técnico propuesto y las historias de usuario a cubrir.
+5. **Esperar aprobación:** No realizar modificaciones en el código hasta recibir la confirmación explícita del usuario.
+6. **Implementar:** Escribir el código estrictamente necesario para cumplir con el alcance del Issue.
+7. **Probar:** Validar el cambio en múltiples resoluciones (mobile-first) y escenarios de error.
+8. **Revisar:** Inspeccionar la calidad del código, asegurando que sea limpio y libre de duplicación.
+9. **Commit:** Realizar el commit semántico correspondiente registrando el avance del Issue.
+10. **Marcar Issue como completado:** Registrar el Issue como resuelto en la lista del Sprint.
+11. **Cerrar Sprint (cuando todos sus Issues estén completos):**
+    - Cerrar el Sprint formalmente.
+    - Actualizar su estado en el Roadmap global.
+    - Crear un Tag de Git (si corresponde).
+
+---
+
+## 4. Trabajo mediante Sprints e Issues
+
+Para garantizar entregas pequeñas, seguras y altamente auditables, se adopta un sistema de trabajo estructurado estrictamente en Sprints e Issues:
+
+- **Componentes del Sprint:** Cada Sprint está compuesto por una lista cerrada de varios **Issues** numerados secuencialmente.
+- **Unidad de Valor:** Cada Issue representa una única historia de usuario pequeña o una funcionalidad específica bien delimitada.
+- **Alcance Acotado:** Cada Issue debe poseer un alcance pequeño, evitando a toda costa agrupar múltiples responsabilidades en una sola tarea.
+- **Validación Individual:** Cada Issue debe poder desarrollarse, probarse, verificarse y aprobarse de manera completamente autónoma e independiente.
+
+El flujo operativo de trabajo se rige estrictamente bajo las siguientes pautas:
+
+- **Todo desarrollo comienza seleccionando un Sprint:** Se identifica y selecciona el Sprint activo y prioritario dentro de la planificación de la versión 1.
+- **Luego se selecciona un Issue:** Se escoge un único Issue numerado de la lista del Sprint activo para su resolución inmediata.
+- **Se implementa únicamente ese Issue:** Se focaliza el esfuerzo de codificación única y exclusivamente en el alcance delimitado de ese Issue, sin mezclar otras funcionalidades o realizar refactorizaciones ajenas.
+- **Se prueba:** Se realizan pruebas completas del cambio en entornos mobile-first para garantizar que funciona sin fallos.
+- **Se revisa:** Se inspecciona la calidad y consistencia del código frente a los estándares de desarrollo del proyecto.
+- **Se realiza commit:** Se efectúa el commit semántico correspondiente que registra los cambios limpios de la tarea.
+- **Se marca el Issue como completado:** Se cambia el estado de dicho Issue a resuelto o completado en la lista del Sprint.
+- **Cuando todos los Issues estén completos, se cierra el Sprint:** Se procede a dar por terminado el Sprint en el Roadmap general únicamente cuando se han validado y finalizado la totalidad de los Issues que lo componen.
+
+---
+
+## 5. Criterios para finalizar un Sprint
+
+Para asegurar un progreso robusto y libre de errores acumulativos, se imponen las siguientes reglas al cierre de cada ciclo:
+- **Finalización con Commit:** Cada Sprint finaliza obligatoriamente con un commit semántico que agrupa exclusivamente los cambios de ese ciclo.
+- **Uso de Tags de Git:** Cada conjunto importante de Sprints completados (o fases críticas) podrá marcarse con un Tag de Git (por ejemplo, `v1.0-frontend`, `v1.1-auth`, etc.) para facilitar puntos de retorno estables.
+- **Secuencialidad Estricta:** No se permite comenzar un Sprint nuevo bajo ninguna circunstancia hasta que el Sprint anterior haya sido completamente aprobado, validado y cerrado.
+
+---
+
+## 6. Flujo de trabajo
 
 El proceso oficial de trabajo debe respetar las siguientes etapas:
 
@@ -48,7 +102,7 @@ Reglas adicionales del flujo de trabajo:
 
 ---
 
-## 4. Convenciones Git
+## 7. Convenciones Git
 
 El proyecto utiliza commits semánticos para mantener un historial claro y fácil de entender.
 
@@ -78,7 +132,7 @@ Buenas prácticas:
 
 ---
 
-## 5. Reglas para modificaciones
+## 8. Reglas para modificaciones
 
 Toda modificación debe ser mínima, intencional y alineada con el objetivo de la tarea.
 
@@ -97,7 +151,7 @@ Reglas obligatorias:
 
 ---
 
-## 6. Reglas para Codex
+## 9. Reglas para Codex
 
 Codex debe trabajar de forma explícita, controlada y verificable.
 
@@ -128,7 +182,7 @@ Reglas específicas para Codex:
 
 ---
 
-## 7. Criterios de calidad
+## 10. Criterios de calidad
 
 Toda funcionalidad nueva debe cumplir con criterios mínimos de calidad antes de considerarse lista.
 
@@ -147,7 +201,7 @@ Debe:
 
 ---
 
-## 8. Criterios para dar una tarea por terminada
+## 11. Criterios para dar una tarea por terminada
 
 Una tarea solamente se considera finalizada cuando:
 
@@ -165,7 +219,7 @@ Si alguno de estos puntos no se cumple, la tarea debe considerarse incompleta o 
 
 ---
 
-## 9. Alcance de la versión 1
+## 12. Alcance de la versión 1
 
 El objetivo principal de la versión 1 es convertir la invitación digital en un Centro de Recuerdos del evento, manteniendo el mismo enlace publicado y preservando una experiencia simple para invitados y administradores.
 
