@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Marcela y Jorge - ¡Nos casamos!</title>
+    <title>Invitación de casamiento</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,14 +21,14 @@
 
     <header id="hero" class="section">
         <div class="hero-content">
-            <h1 class="nombres">Marcela y Jorge</h1>
-            <p class="fecha-destacada">27 . 06 . 2026</p>
+            <h1 id="couple-names" class="nombres"></h1>
+            <p id="hero-date" class="fecha-destacada"></p>
             <button id="play-music-btn" class="btn-minimalista"><i class="fa-solid fa-pause"></i> Pausar Música</button>
         </div>
     </header>
 
     <section id="countdown-section" class="section">
-        <p class="intro-text">Queremos celebrar junto a vos este momento tan especial para nosotros...</p>
+        <p id="intro-text" class="intro-text"></p>
         
         <div id="countdown-timer">
             <div class="time-box"><span id="dias">00</span><p>Días</p></div>
@@ -39,65 +39,55 @@
     </section>
 
     <section id="eventos" class="section">
-       <!--  <div class="card-evento">
-            <img src="assets/img-3.png" alt="Dibujo Glorieta" class="img-evento">
-            <h2>Civil</h2>
-            <p class="fecha">01 de junio</p>
-            <p class="hora">13:00 hs.</p>
-            <p class="lugar">Glorieta de Barrancas de Belgrano</p>
-            <p class="indicaciones">Clickeá en el botón y recibí las indicaciones para llegar.</p>
-            <a href="https://maps.app.goo.gl/NeE9KdY1AmCFJdmR8" class="btn-rectangular" target="_blank">CÓMO LLEGAR</a>
-        </div>
--->
         <div class="card-evento">
             <img src="assets/img-2.png" alt="Dibujo Palacio" class="img-evento">
-            <h2>Fiesta</h2>
-            <p class="fecha">27 de junio</p>
-            <p class="hora">20:40 hs.</p>
-            <p class="lugar">New Palace Eventos</p>
-            <p class="indicaciones">Clickeá en el botón y recibí las indicaciones para llegar.</p>
-            <p class="esperamos">Por favor, se puntual, Te esperamos!</p>
-            <a href="https://maps.app.goo.gl/K9eTUre2XknShAeo7" class="btn-rectangular" target="_blank">CÓMO LLEGAR</a>
+            <h2 id="event-title"></h2>
+            <p id="event-date" class="fecha"></p>
+            <p id="event-time" class="hora"></p>
+            <p id="event-venue" class="lugar"></p>
+            <p id="event-directions-text" class="indicaciones"></p>
+            <p id="event-punctuality-text" class="esperamos"></p>
+            <a id="maps-link" class="btn-rectangular" target="_blank"></a>
         </div>
     </section>
 
     <section id="dress-code" class="section bg-lavanda">
         <i class="fa-brands fa-black-tie icon-evento"></i>
-        <h2>Dress Code</h2>
-        <p class="frase-dresscode">"Nos encantaría verte con tus mejores galas para esta noche tan especial"</p>
-        <p class="codigo-vestimenta">FORMAL ELEGANTE</p>
+        <h2 id="dress-code-title"></h2>
+        <p id="dress-code-text" class="frase-dresscode"></p>
+        <p id="dress-code-value" class="codigo-vestimenta"></p>
     </section>
 
     <section id="asistencia" class="section">
         <i class="fa-solid fa-envelope-open-text icon-evento"></i>
-        <h2>Confirmación de Asistencia</h2>
-        <p>Esperamos que seas parte de esta gran celebración. ¡Confirmanos tu asistencia!</p>
-        <a href="https://docs.google.com/forms/d/e/1FAIpQLSecEPbrfnRB-UrCt4vSvN3sTsqWSDOY8Ww58fOYRZjwCuLNAA/viewform?usp=publish-editor" class="btn-rectangular" target="_blank">CONFIRMAR ASISTENCIA</a>
+        <h2 id="rsvp-title"></h2>
+        <p id="rsvp-text"></p>
+        <a id="rsvp-link" class="btn-rectangular" target="_blank"></a>
         
-        <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=Casamiento+Marcela+y+Jorge&dates=20260627T210000/20260628T050000&details=¡Te+esperamos+para+celebrar+nuestra+boda!&location=New+Palace+Eventos" class="btn-rectangular btn-secundario" target="_blank">AGENDAR EVENTO</a>
+        <a id="calendar-link" class="btn-rectangular btn-secundario" target="_blank"></a>
     </section>
 
     <section id="regalos" class="section bg-lavanda">
         <i class="fa-solid fa-gift icon-evento"></i>
-        <h2>Mesa de Regalos</h2>
-        <p class="intro-text">El mejor regalo es tu presencia. Pero si deseas hacernos un presente, podés colaborar con nuestra luna de miel:</p>
+        <h2 id="gifts-title"></h2>
+        <p id="gift-text" class="intro-text"></p>
         <div class="datos-bancarios">
-            <p><strong>CBU:</strong> 0070234030004025989626</p>
-            <p><strong>Alias:</strong> COLOR.COATI.YERBA</p>
-            <p><strong>Titular:</strong> Jorge A. Claros</p>
+            <p><strong>CBU:</strong> <span id="bank-cbu"></span></p>
+            <p><strong>Alias:</strong> <span id="bank-alias"></span></p>
+            <p><strong>Titular:</strong> <span id="bank-holder"></span></p>
         </div>
     </section>
 
     <section id="musica-sugerida" class="section">
         <i class="fa-solid fa-music icon-evento"></i>
-        <h2>¿Qué canciones no pueden faltar?</h2>
-        <p>¡Ayudanos agregando las canciones que pensás que no pueden faltar en la fiesta a nuestra lista!</p>
-        <a href="https://open.spotify.com/playlist/2vW8MZfzzfk0heseMr7LKu?si=ff52de9f1c2c46f3&pt=5571456815580f3776fecae7ad71fd17" class="btn-rectangular" target="_blank">AGREGAR A SPOTIFY</a>
+        <h2 id="music-title"></h2>
+        <p id="music-text"></p>
+        <a id="spotify-link" class="btn-rectangular" target="_blank"></a>
     </section>
 
     <footer id="footer" class="section">
-        <h2 class="nombres">Marcela y Jorge</h2>
-        <p class="agradecimiento">Gracias por acompañarnos y compartir nuestra felicidad...</p>
+        <h2 id="footer-names" class="nombres"></h2>
+        <p id="footer-text" class="agradecimiento"></p>
     </footer>
 
     <script src="script.js"></script>
