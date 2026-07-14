@@ -1,0 +1,19 @@
+# Windows
+Thumbs.db
+desktop.ini
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# Variables de entorno (para cuando agreguemos Firebase)
+.env
+.env.local
+
+# Node (por si en el futuro agregamos herramientas)
+node_modules/
