@@ -43,6 +43,22 @@ const eventConfig = {
         cbu: "0070234030004025989626",
         alias: "COLOR.COATI.YERBA",
         holder: "Jorge A. Claros"
+    },
+    access: {
+        eventCode: "MARCELA-JORGE-2026",
+        adminCode: "NOVIOS-2026"
+    },
+    musicPlaylist: [
+        {
+            title: "Unchained Melody",
+            artist: "The Righteous Brothers",
+            duration: "03:36",
+            file: "assets/audio/unchained-melody.mp3"
+        }
+    ],
+    albumTemplates: {
+        guestAlbumType: "guest",
+        officialAlbumType: "official"
     }
 };
 
@@ -98,7 +114,128 @@ function applyEventConfig() {
 
 applyEventConfig();
 
-// --- 3. LÓGICA DE LA CUENTA REGRESIVA ---
+// --- 3. FLUJO LOCAL DE INGRESO AL CENTRO DE RECUERDOS ---
+const accessStorageKey = "centroRecuerdosAccess";
+const albumStorageKey = "centroRecuerdosAlbums";
+
+function getStoredAccessProfile() {
+    const storedProfile = localStorage.getItem(accessStorageKey);
+    return storedProfile ? JSON.parse(storedProfile) : null;
+}
+
+function saveAccessProfile(profile) {
+    localStorage.setItem(accessStorageKey, JSON.stringify(profile));
+}
+
+function getStoredAlbums() {
+    const storedAlbums = localStorage.getItem(albumStorageKey);
+    return storedAlbums ? JSON.parse(storedAlbums) : [];
+}
+
+function saveAlbums(albums) {
+    localStorage.setItem(albumStorageKey, JSON.stringify(albums));
+}
+
+function createPersonalAlbum(guestName) {
+    const normalizedName = guestName.trim();
+    const albums = getStoredAlbums();
+    const albumTitle = "Fotos de " + normalizedName;
+    const existingAlbum = albums.find((album) => album.ownerName === normalizedName && album.type === eventConfig.albumTemplates.guestAlbumType);
+
+    if (existingAlbum) {
+        return existingAlbum;
+    }
+
+    const newAlbum = {
+        id: "guest-" + Date.now(),
+        type: eventConfig.albumTemplates.guestAlbumType,
+        title: albumTitle,
+        ownerName: normalizedName,
+        visible: false,
+        photos: [],
+        video: null,
+        createdAt: new Date().toISOString()
+    };
+
+    albums.push(newAlbum);
+    saveAlbums(albums);
+    return newAlbum;
+}
+
+function closeAccessModal() {
+    document.getElementById("access-modal").hidden = true;
+    document.body.classList.remove("modal-open");
+}
+
+function showAccessFeedback(message) {
+    document.getElementById("access-feedback").textContent = message;
+}
+
+function setAccessMode(mode) {
+    const isGuestMode = mode === "guest";
+
+    document.getElementById("guest-access-option").classList.toggle("active", isGuestMode);
+    document.getElementById("admin-access-option").classList.toggle("active", !isGuestMode);
+    document.getElementById("guest-access-form").hidden = !isGuestMode;
+    document.getElementById("admin-access-form").hidden = isGuestMode;
+    showAccessFeedback("");
+}
+
+function handleGuestAccess(event) {
+    event.preventDefault();
+
+    const guestName = document.getElementById("guest-name").value.trim();
+    const eventCode = document.getElementById("event-code").value.trim();
+
+    if (!guestName || eventCode !== eventConfig.access.eventCode) {
+        showAccessFeedback("Revisá tu nombre y el código del evento para ingresar.");
+        return;
+    }
+
+    const profile = {
+        name: guestName,
+        type: "guest",
+        enteredAt: new Date().toISOString()
+    };
+
+    saveAccessProfile(profile);
+    createPersonalAlbum(guestName);
+    closeAccessModal();
+}
+
+function handleAdminAccess(event) {
+    event.preventDefault();
+
+    const adminCode = document.getElementById("admin-code").value.trim();
+
+    if (adminCode !== eventConfig.access.adminCode) {
+        showAccessFeedback("Revisá el código administrador para ingresar.");
+        return;
+    }
+
+    saveAccessProfile({
+        type: "admin",
+        enteredAt: new Date().toISOString()
+    });
+    closeAccessModal();
+}
+
+function initializeAccessFlow() {
+    if (getStoredAccessProfile()) {
+        closeAccessModal();
+        return;
+    }
+
+    document.body.classList.add("modal-open");
+    document.getElementById("guest-access-option").addEventListener("click", () => setAccessMode("guest"));
+    document.getElementById("admin-access-option").addEventListener("click", () => setAccessMode("admin"));
+    document.getElementById("guest-access-form").addEventListener("submit", handleGuestAccess);
+    document.getElementById("admin-access-form").addEventListener("submit", handleAdminAccess);
+}
+
+initializeAccessFlow();
+
+// --- 4. LÓGICA DE LA CUENTA REGRESIVA ---
 const fechaBoda = new Date(eventConfig.event.dateTime).getTime();
 let intervalo;
 
@@ -139,7 +276,7 @@ if (updateCountdown()) {
     intervalo = setInterval(updateCountdown, 1000);
 }
 
-// --- 4. LÓGICA DEL REPRODUCTOR DE MÚSICA (CON AUTOPLAY) ---
+// --- 5. LÓGICA DEL REPRODUCTOR DE MÚSICA (CON AUTOPLAY) ---
 const audio = document.getElementById("bg-music");
 const playBtn = document.getElementById("play-music-btn");
 let isPlaying = false;
