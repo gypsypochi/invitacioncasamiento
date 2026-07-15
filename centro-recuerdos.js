@@ -121,6 +121,11 @@ const recuerdosDemoData = {
 
 const accessStorageKey = "centroRecuerdosAccess";
 const albumStorageKey = "centroRecuerdosAlbums";
+const wallStorageKey = "centroRecuerdosWallMessages";
+
+const recuerdosAppState = {
+    messageColor: "rose"
+};
 
 function escapeHTML(value) {
     return String(value)
@@ -175,6 +180,91 @@ function getStoredAlbums() {
 
 function saveAlbums(albums) {
     localStorage.setItem(albumStorageKey, JSON.stringify(albums));
+}
+
+function getWallSessionKey(profile = getStoredAccessProfile()) {
+    if (profile && profile.type === "guest" && profile.name) {
+        return "guest:" + profile.name;
+    }
+
+    if (profile && profile.type === "admin") {
+        return "admin";
+    }
+
+    return "visitor";
+}
+
+function getCurrentWallAuthor(profile = getStoredAccessProfile()) {
+    if (profile && profile.type === "guest" && profile.name) {
+        return profile.name;
+    }
+
+    if (profile && profile.type === "admin") {
+        return "Administración";
+    }
+
+    return "Invitado";
+}
+
+function getWallColorPalette() {
+    return [
+        { key: "rose", label: "Rosa", className: "accent-rose" },
+        { key: "lavender", label: "Lavanda", className: "accent-lavender" },
+        { key: "sand", label: "Arena", className: "accent-sand" },
+        { key: "plum", label: "Ciruela", className: "accent-plum" }
+    ];
+}
+
+function normalizeWallMessage(message, index = 0) {
+    const palette = getWallColorPalette();
+    return {
+        id: message.id || "wall-" + Date.now() + "-" + index,
+        author: message.author || "Invitado",
+        ownerKey: message.ownerKey || "visitor",
+        createdAt: message.createdAt || new Date().toISOString(),
+        text: message.text || "",
+        color: message.color || palette[index % palette.length].key
+    };
+}
+
+function getStoredWallMessages() {
+    const storedMessages = localStorage.getItem(wallStorageKey);
+
+    if (storedMessages) {
+        try {
+            return JSON.parse(storedMessages).map((message, index) => normalizeWallMessage(message, index));
+        } catch (error) {
+            return [];
+        }
+    }
+
+    return recuerdosDemoData.messageBoardSeed.map((message, index) => normalizeWallMessage({
+        id: "seed-" + index,
+        author: message.author,
+        ownerKey: "seed-" + index,
+        createdAt: new Date(Date.now() - ((index + 1) * 3600 * 1000)).toISOString(),
+        text: message.message,
+        color: getWallColorPalette()[index % getWallColorPalette().length].key
+    }, index));
+}
+
+function saveWallMessages(messages) {
+    localStorage.setItem(wallStorageKey, JSON.stringify(messages.map((message, index) => normalizeWallMessage(message, index))));
+}
+
+function formatWallTimestamp(isoDate) {
+    const date = new Date(isoDate);
+
+    if (Number.isNaN(date.getTime())) {
+        return "Hace un momento";
+    }
+
+    return new Intl.DateTimeFormat("es-AR", {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit"
+    }).format(date);
 }
 
 function ensurePersonalAlbum(guestName) {
@@ -1066,6 +1156,426 @@ function initializeToastInteractions() {
             }
 
             showToast("Escribí un mensaje para dejar tu saludo.", "default");
+        });
+    }
+}
+
+function renderMessageBoardSection() {
+    const section = document.getElementById("messages-section");
+
+    if (!section) {
+        return;
+    }
+
+    const profile = getStoredAccessProfile();
+    const canCompose = profile && profile.type === "guest";
+    const selectedColor = recuerdosAppState.messageColor;
+    const colorPalette = getWallColorPalette();
+
+    section.className = "section";
+    section.innerHTML = `
+        <i class="fa-solid fa-envelope-open-text icon-evento" aria-hidden="true"></i>
+        <h2>Muro de Comentarios y Saludos</h2>
+        <p class="message-board-intro">Dej&aacute; un recuerdo, un saludo o unas palabras para acompa&ntilde;ar este momento tan especial.</p>
+
+        ${canCompose ? `
+            <div class="message-composer" aria-label="Escribir un saludo">
+                <textarea
+                    id="message-composer-input"
+                    class="message-composer-input"
+                    placeholder="Escrib&iacute; tu mensaje..."
+                    rows="5"
+                ></textarea>
+
+                <div class="message-composer-toolbar">
+                    <div class="message-color-selector" id="message-color-selector" aria-label="Elegir color del mensaje">
+                        ${colorPalette.map((color) => `
+                            <button
+                                class="message-color-swatch${color.key === selectedColor ? " is-selected" : ""}"
+                                type="button"
+                                data-color="${color.key}"
+                                aria-label="${color.label}"
+                                aria-pressed="${color.key === selectedColor ? "true" : "false"}"
+                            ></button>
+                        `).join("")}
+                    </div>
+
+                    <button id="message-composer-btn" class="btn-rectangular" type="button">Publicar</button>
+                </div>
+            </div>
+        ` : ""}
+
+        <div class="message-board-wall" id="message-board-grid" aria-live="polite"></div>
+    `;
+
+    const composerInput = document.getElementById("message-composer-input");
+    const composerButton = document.getElementById("message-composer-btn");
+    const colorSelector = document.getElementById("message-color-selector");
+
+    if (composerButton) {
+        composerButton.addEventListener("click", () => {
+            const text = composerInput ? composerInput.value.trim() : "";
+
+            if (!text) {
+                showToast("Escribí un mensaje para dejar tu saludo.", "default");
+                return;
+            }
+
+            if (!profile) {
+                showToast("Ingresá para dejar tu saludo.", "default");
+                return;
+            }
+
+            const messages = getStoredWallMessages();
+            messages.unshift({
+                id: "wall-" + Date.now(),
+                author: getCurrentWallAuthor(profile),
+                ownerKey: getWallSessionKey(profile),
+                createdAt: new Date().toISOString(),
+                text,
+                color: recuerdosAppState.messageColor
+            });
+
+            saveWallMessages(messages);
+
+            if (composerInput) {
+                composerInput.value = "";
+            }
+
+            renderMessageBoardCards();
+            showToast("Tu saludo quedó publicado.", "success");
+        });
+    }
+
+    if (colorSelector) {
+        colorSelector.addEventListener("click", (event) => {
+            const button = event.target.closest(".message-color-swatch");
+
+            if (!button || !button.dataset.color) {
+                return;
+            }
+
+            recuerdosAppState.messageColor = button.dataset.color;
+
+            colorSelector.querySelectorAll(".message-color-swatch").forEach((swatch) => {
+                const isSelected = swatch.dataset.color === button.dataset.color;
+                swatch.classList.toggle("is-selected", isSelected);
+                swatch.setAttribute("aria-pressed", isSelected ? "true" : "false");
+            });
+        });
+    }
+
+    renderMessageBoardCards();
+}
+
+function renderMessageBoardCards() {
+    const boardElement = document.getElementById("message-board-grid");
+
+    if (!boardElement) {
+        return;
+    }
+
+    const profile = getStoredAccessProfile();
+    const currentOwnerKey = getWallSessionKey(profile);
+    const messages = getStoredWallMessages();
+
+    boardElement.innerHTML = messages.map((message) => {
+        const canManageMessage = message.ownerKey === currentOwnerKey && currentOwnerKey !== "visitor";
+
+        return `
+            <article class="message-note accent-${escapeHTML(message.color)}">
+                <div class="message-note-head">
+                    <strong class="message-note-author">${escapeHTML(message.author)}</strong>
+                    <span class="message-note-meta">${escapeHTML(formatWallTimestamp(message.createdAt))}</span>
+                </div>
+                <p class="message-note-text">${escapeHTML(message.text)}</p>
+                ${canManageMessage ? `
+                    <div class="message-note-actions">
+                        <button type="button" class="message-note-action" data-action="edit" data-message-id="${escapeHTML(message.id)}">Editar</button>
+                        <button type="button" class="message-note-action" data-action="delete" data-message-id="${escapeHTML(message.id)}">Eliminar</button>
+                    </div>
+                ` : ""}
+            </article>
+        `;
+    }).join("");
+
+    boardElement.querySelectorAll("[data-action]").forEach((button) => {
+        button.addEventListener("click", () => {
+            const action = button.dataset.action;
+            const messageId = button.dataset.messageId;
+
+            if (!action || !messageId) {
+                return;
+            }
+
+            handleWallAction(action, messageId);
+        });
+    });
+}
+
+function handleWallAction(action, messageId) {
+    const profile = getStoredAccessProfile();
+    const currentOwnerKey = getWallSessionKey(profile);
+    const messages = getStoredWallMessages();
+    const messageIndex = messages.findIndex((message) => message.id === messageId);
+
+    if (messageIndex === -1) {
+        return;
+    }
+
+    const message = messages[messageIndex];
+
+    if (message.ownerKey !== currentOwnerKey || currentOwnerKey === "visitor") {
+        return;
+    }
+
+    if (action === "delete") {
+        if (!window.confirm("¿Querés eliminar este mensaje?")) {
+            return;
+        }
+
+        messages.splice(messageIndex, 1);
+        saveWallMessages(messages);
+        renderMessageBoardCards();
+        return;
+    }
+
+    if (action === "edit") {
+        const nextText = window.prompt("Editá tu mensaje", message.text);
+
+        if (nextText === null) {
+            return;
+        }
+
+        const trimmedText = nextText.trim();
+
+        if (!trimmedText) {
+            showToast("El mensaje no puede quedar vacío.", "default");
+            return;
+        }
+
+        messages[messageIndex] = {
+            ...message,
+            text: trimmedText
+        };
+
+        saveWallMessages(messages);
+        renderMessageBoardCards();
+    }
+}
+
+function renderMessageBoardSection() {
+    const section = document.getElementById("messages-section");
+
+    if (!section) {
+        return;
+    }
+
+    const profile = getStoredAccessProfile();
+    const canCompose = profile && profile.type === "guest";
+    const selectedColor = recuerdosAppState.messageColor;
+    const colorPalette = getWallColorPalette();
+
+    section.className = "section";
+    section.innerHTML = `
+        <i class="fa-solid fa-envelope-open-text icon-evento" aria-hidden="true"></i>
+        <h2>Muro de Comentarios y Saludos</h2>
+        <p class="message-board-intro">Dej&aacute; un recuerdo, un saludo o unas palabras para acompa&ntilde;ar este momento tan especial.</p>
+
+        ${canCompose ? `
+            <div class="message-composer" aria-label="Escribir un saludo">
+                <textarea
+                    id="message-composer-input"
+                    class="message-composer-input"
+                    placeholder="Escrib&iacute; tu mensaje..."
+                    rows="5"
+                ></textarea>
+
+                <div class="message-composer-toolbar">
+                    <div class="message-color-selector" id="message-color-selector" aria-label="Elegir color del mensaje">
+                        ${colorPalette.map((color) => `
+                            <button
+                                class="message-color-swatch${color.key === selectedColor ? " is-selected" : ""}"
+                                type="button"
+                                data-color="${color.key}"
+                                aria-label="${color.label}"
+                                aria-pressed="${color.key === selectedColor ? "true" : "false"}"
+                            ></button>
+                        `).join("")}
+                    </div>
+
+                    <button id="message-composer-btn" class="btn-rectangular" type="button">Publicar</button>
+                </div>
+            </div>
+        ` : ""}
+
+        <div class="message-board-wall" id="message-board-grid" aria-live="polite"></div>
+    `;
+
+    const composerInput = document.getElementById("message-composer-input");
+    const composerButton = document.getElementById("message-composer-btn");
+    const colorSelector = document.getElementById("message-color-selector");
+
+    if (composerButton) {
+        composerButton.addEventListener("click", () => {
+            const text = composerInput ? composerInput.value.trim() : "";
+
+            if (!text) {
+                showToast("Escribí un mensaje para dejar tu saludo.", "default");
+                return;
+            }
+
+            const messages = getStoredWallMessages();
+            messages.unshift({
+                id: "wall-" + Date.now(),
+                author: getCurrentWallAuthor(profile),
+                ownerKey: getWallSessionKey(profile),
+                createdAt: new Date().toISOString(),
+                text,
+                color: recuerdosAppState.messageColor
+            });
+
+            saveWallMessages(messages);
+
+            if (composerInput) {
+                composerInput.value = "";
+            }
+
+            renderMessageBoardCards();
+            showToast("Tu saludo quedó publicado.", "success");
+        });
+    }
+
+    if (colorSelector) {
+        colorSelector.addEventListener("click", (event) => {
+            const button = event.target.closest(".message-color-swatch");
+
+            if (!button || !button.dataset.color) {
+                return;
+            }
+
+            recuerdosAppState.messageColor = button.dataset.color;
+
+            colorSelector.querySelectorAll(".message-color-swatch").forEach((swatch) => {
+                const isSelected = swatch.dataset.color === button.dataset.color;
+                swatch.classList.toggle("is-selected", isSelected);
+                swatch.setAttribute("aria-pressed", isSelected ? "true" : "false");
+            });
+        });
+    }
+
+    renderMessageBoardCards();
+}
+
+function renderMessageBoardCards() {
+    const boardElement = document.getElementById("message-board-grid");
+
+    if (!boardElement) {
+        return;
+    }
+
+    const profile = getStoredAccessProfile();
+    const currentOwnerKey = getWallSessionKey(profile);
+    const messages = getStoredWallMessages();
+
+    boardElement.innerHTML = messages.map((message) => {
+        const canManageMessage = message.ownerKey === currentOwnerKey && currentOwnerKey !== "visitor";
+
+        return `
+            <article class="message-note accent-${escapeHTML(message.color)}">
+                <div class="message-note-head">
+                    <strong class="message-note-author">${escapeHTML(message.author)}</strong>
+                    <span class="message-note-meta">${escapeHTML(formatWallTimestamp(message.createdAt))}</span>
+                </div>
+                <p class="message-note-text">${escapeHTML(message.text)}</p>
+                ${canManageMessage ? `
+                    <div class="message-note-actions">
+                        <button type="button" class="message-note-action" data-action="edit" data-message-id="${escapeHTML(message.id)}">Editar</button>
+                        <button type="button" class="message-note-action" data-action="delete" data-message-id="${escapeHTML(message.id)}">Eliminar</button>
+                    </div>
+                ` : ""}
+            </article>
+        `;
+    }).join("");
+
+    boardElement.querySelectorAll("[data-action]").forEach((button) => {
+        button.addEventListener("click", () => {
+            const action = button.dataset.action;
+            const messageId = button.dataset.messageId;
+
+            if (!action || !messageId) {
+                return;
+            }
+
+            handleWallAction(action, messageId);
+        });
+    });
+}
+
+function handleWallAction(action, messageId) {
+    const profile = getStoredAccessProfile();
+    const currentOwnerKey = getWallSessionKey(profile);
+    const messages = getStoredWallMessages();
+    const messageIndex = messages.findIndex((message) => message.id === messageId);
+
+    if (messageIndex === -1) {
+        return;
+    }
+
+    const message = messages[messageIndex];
+
+    if (message.ownerKey !== currentOwnerKey || currentOwnerKey === "visitor") {
+        return;
+    }
+
+    if (action === "delete") {
+        if (!window.confirm("¿Querés eliminar este mensaje?")) {
+            return;
+        }
+
+        messages.splice(messageIndex, 1);
+        saveWallMessages(messages);
+        renderMessageBoardCards();
+        return;
+    }
+
+    if (action === "edit") {
+        const nextText = window.prompt("Editá tu mensaje", message.text);
+
+        if (nextText === null) {
+            return;
+        }
+
+        const trimmedText = nextText.trim();
+
+        if (!trimmedText) {
+            showToast("El mensaje no puede quedar vacío.", "default");
+            return;
+        }
+
+        messages[messageIndex] = {
+            ...message,
+            text: trimmedText
+        };
+
+        saveWallMessages(messages);
+        renderMessageBoardCards();
+    }
+}
+
+function initializeToastInteractions() {
+    const photosButton = document.getElementById("personal-upload-photos-btn");
+    const videoButton = document.getElementById("personal-upload-video-btn");
+
+    if (photosButton) {
+        photosButton.addEventListener("click", () => {
+            simulatePersonalUpload("Fotos");
+        });
+    }
+
+    if (videoButton) {
+        videoButton.addEventListener("click", () => {
+            simulatePersonalUpload("Video");
         });
     }
 }

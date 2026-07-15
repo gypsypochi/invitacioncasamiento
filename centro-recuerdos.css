@@ -165,110 +165,180 @@ body.centro-recuerdos-page::before {
     display: none;
 }
 
-.message-board-layout,
-.albums-layout {
-    width: 100%;
-    max-width: 92rem;
-    margin: 0 auto;
-    display: grid;
-    gap: 1.5rem;
-    text-align: left;
+#messages-section {
+    text-align: center;
 }
 
-.message-board-layout {
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-    align-items: start;
+#messages-section .icon-evento {
+    color: var(--color-dorado);
+    margin-bottom: 1.25rem;
+}
+
+#messages-section h2 {
+    font-size: clamp(2.4rem, 4vw, 3.7rem);
+    margin-bottom: 1.1rem;
+}
+
+.message-board-intro {
+    max-width: 36rem;
+    margin: 0 auto 2rem;
+    color: #5b5160;
+    font-size: 1.08rem;
+    line-height: 1.8;
+    font-style: italic;
 }
 
 .message-composer {
+    width: 100%;
+    max-width: 42rem;
+    margin: 0 auto 2rem;
     display: grid;
     gap: 0.9rem;
     text-align: left;
 }
 
-.message-composer h3 {
-    font-size: 1.6rem;
-}
-
-.message-composer p {
-    color: #5b5160;
-    line-height: 1.7;
-    font-style: italic;
-}
-
-.message-composer-name-pill {
-    display: inline-flex;
-    width: fit-content;
-    padding: 0.45rem 0.75rem;
-    border-radius: 999px;
-    background: rgba(197, 161, 230, 0.14);
-    color: #5d4471;
-    font-size: 0.85rem;
-}
-
 .message-composer-input {
     width: 100%;
+    min-height: 8.25rem;
     border: 0.0625rem solid rgba(197, 160, 89, 0.18);
     border-radius: 18px;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.88);
     color: #2f2733;
     font: inherit;
     padding: 0.95rem 1rem;
     resize: vertical;
-    min-height: 8rem;
 }
 
-.message-board-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.message-composer-input:focus {
+    outline: none;
+    border-color: rgba(197, 160, 89, 0.45);
+    box-shadow: 0 0 0 0.2rem rgba(197, 160, 89, 0.08);
+}
+
+.message-composer-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     gap: 1rem;
+    flex-wrap: wrap;
 }
 
-.message-card {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 0.85rem;
-    padding: 0.95rem 0;
-    border-bottom: 0.0625rem solid rgba(197, 160, 89, 0.18);
+.message-color-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
 }
 
-.message-avatar {
-    width: 2.8rem;
-    height: 2.8rem;
+.message-color-swatch {
+    width: 1.15rem;
+    height: 1.15rem;
     border-radius: 50%;
-    display: grid;
-    place-items: center;
-    background: rgba(197, 160, 89, 0.14);
-    color: #6d5521;
-    font-weight: 600;
+    border: 0.125rem solid transparent;
+    padding: 0;
+    box-shadow: 0 0 0 0.12rem rgba(255, 255, 255, 0.9);
+    background: var(--swatch-color);
 }
 
-.message-body {
-    min-width: 0;
+.message-color-swatch[data-color="rose"] {
+    --swatch-color: #e7b7bf;
+}
+
+.message-color-swatch[data-color="lavender"] {
+    --swatch-color: #c5a1e6;
+}
+
+.message-color-swatch[data-color="sand"] {
+    --swatch-color: #e5cf99;
+}
+
+.message-color-swatch[data-color="plum"] {
+    --swatch-color: #a771c9;
+}
+
+.message-color-swatch.is-selected {
+    border-color: var(--color-dorado);
+    transform: scale(1.15);
+}
+
+.message-board-wall {
+    width: 100%;
+    max-width: 92rem;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 1rem;
     text-align: left;
 }
 
-.message-body-head {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.55rem;
-    align-items: baseline;
-    margin-bottom: 0.35rem;
+.message-note {
+    display: block;
+    flex: 1 1 18rem;
+    max-width: 20rem;
+    padding: 1rem 1rem 0.95rem;
+    border-radius: 20px;
+    border: 0.0625rem solid rgba(197, 160, 89, 0.15);
+    box-shadow: 0 0.65rem 1.5rem rgba(0, 0, 0, 0.05);
 }
 
-.message-author {
+.message-note.accent-rose {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(231, 183, 191, 0.16));
+}
+
+.message-note.accent-lavender {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(197, 161, 230, 0.16));
+}
+
+.message-note.accent-sand {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(229, 207, 153, 0.16));
+}
+
+.message-note.accent-plum {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(167, 113, 201, 0.14));
+}
+
+.message-note-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.8rem;
+    align-items: baseline;
+    margin-bottom: 0.7rem;
+}
+
+.message-note-author {
+    color: #2f2733;
     font-size: 1rem;
 }
 
-.message-meta {
+.message-note-meta {
     color: #75697b;
     font-size: 0.82rem;
 }
 
-.message-text {
+.message-note-text {
     color: #3f3645;
-    line-height: 1.7;
+    line-height: 1.75;
     font-style: italic;
+    white-space: pre-wrap;
+}
+
+.message-note-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.95rem;
+}
+
+.message-note-action {
+    border: 0;
+    background: transparent;
+    color: var(--color-dorado);
+    font: inherit;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 0.2rem;
 }
 
 .presentation-simple {
@@ -697,13 +767,13 @@ body.modal-open {
 }
 
 @media (max-width: 900px) {
-    .message-board-layout,
     .albums-layout {
         grid-template-columns: 1fr;
     }
 
-    .message-board-grid {
-        grid-template-columns: 1fr;
+    .message-composer-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
     }
 
     .access-options {
@@ -712,8 +782,21 @@ body.modal-open {
 }
 
 @media (max-width: 560px) {
-    .recuerdos-section {
+    .section {
         padding-inline: 0.9rem;
+    }
+
+    #messages-section {
+        padding-inline: 0.9rem;
+    }
+
+    .message-board-wall {
+        gap: 0.9rem;
+    }
+
+    .message-note {
+        flex-basis: 100%;
+        max-width: none;
     }
 
     .access-modal-card {
