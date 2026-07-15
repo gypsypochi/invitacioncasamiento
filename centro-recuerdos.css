@@ -165,6 +165,155 @@ body.centro-recuerdos-page::before {
     display: none;
 }
 
+.recuerdos-center-section {
+    text-align: center;
+}
+
+.recuerdos-center-section .icon-evento {
+    color: var(--color-dorado);
+    margin-bottom: 1.25rem;
+}
+
+.recuerdos-center-section h2 {
+    font-size: clamp(2.6rem, 4.2vw, 3.9rem);
+    margin-bottom: 1rem;
+}
+
+.center-section-intro {
+    max-width: 42rem;
+    margin: 0 auto 2.5rem;
+    color: #5b5160;
+    font-size: 1.08rem;
+    line-height: 1.8;
+    font-style: italic;
+}
+
+.center-my-album {
+    max-width: 44rem;
+    margin: 0 auto 3rem;
+    display: grid;
+    justify-items: center;
+    gap: 1rem;
+}
+
+.center-my-album-icon {
+    color: var(--color-dorado);
+    font-size: 2rem;
+}
+
+.center-my-album h3 {
+    font-size: 1.7rem;
+}
+
+.center-my-album-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.center-my-album-card {
+    width: calc(100% + 2.5rem);
+    margin: 0 -1.25rem 3rem;
+    padding: 2.4rem 1.25rem;
+    background: var(--bg-beige);
+    border: 0.0625rem solid rgba(197, 160, 89, 0.2);
+    display: grid;
+    justify-items: center;
+    gap: 1rem;
+}
+
+.center-my-album-card h3 {
+    font-size: 1.7rem;
+}
+
+.center-my-album-card .center-my-album-icon {
+    color: var(--color-dorado);
+    font-size: 2rem;
+}
+
+.center-explore {
+    width: 100%;
+    max-width: 92rem;
+    margin: 0 auto;
+    display: grid;
+    gap: 1.5rem;
+}
+
+.center-explore h3 {
+    font-size: 2rem;
+}
+
+.center-explore-tools {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.center-search-field {
+    display: grid;
+    gap: 0.45rem;
+    width: min(100%, 24rem);
+    text-align: left;
+}
+
+.center-search-field span {
+    color: #615667;
+    font-size: 0.88rem;
+    letter-spacing: 0.06rem;
+    text-transform: uppercase;
+}
+
+.center-search-field input {
+    width: 100%;
+    border-radius: 18px;
+    border: 0.0625rem solid rgba(197, 160, 89, 0.18);
+    background: rgba(255, 255, 255, 0.88);
+    color: #2f2733;
+    font: inherit;
+    padding: 0.95rem 1rem;
+}
+
+.center-presentation-btn,
+.center-more-btn {
+    min-width: 11rem;
+}
+
+.center-albums-grid {
+    width: 100%;
+    max-width: 58rem;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+    gap: 1rem;
+}
+
+.center-album-item {
+    display: grid;
+    justify-items: center;
+    gap: 0.6rem;
+    padding: 0.35rem 0.2rem;
+}
+
+.center-album-icon {
+    color: var(--color-dorado);
+    font-size: 2rem;
+}
+
+.center-album-name {
+    color: #2f2733;
+    font-size: 1.02rem;
+    font-weight: 500;
+}
+
+.center-more-btn {
+    width: fit-content;
+    min-width: 0;
+    justify-self: center;
+}
+
 #messages-section {
     text-align: center;
 }
@@ -771,6 +920,11 @@ body.modal-open {
         grid-template-columns: 1fr;
     }
 
+    .center-explore-tools {
+        flex-direction: column;
+        align-items: center;
+    }
+
     .message-composer-toolbar {
         flex-direction: column;
         align-items: flex-start;
@@ -788,6 +942,16 @@ body.modal-open {
 
     #messages-section {
         padding-inline: 0.9rem;
+    }
+
+    .center-my-album-card {
+        width: calc(100% + 1.8rem);
+        margin-inline: -0.9rem;
+        padding-inline: 0.9rem;
+    }
+
+    .center-albums-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .message-board-wall {

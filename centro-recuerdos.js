@@ -15,10 +15,6 @@ const recuerdosDemoData = {
             label: "Fotos Profesionales"
         },
         {
-            target: "messages-section",
-            label: "Muro"
-        },
-        {
             target: "albums-section",
             label: "Centro de Recuerdos"
         }
@@ -457,8 +453,11 @@ function renderRecuerdosAppShell() {
 
         <section id="photos-section" class="section bg-lavanda" data-section="photos-section"></section>
         <section id="messages-section" class="section recuerdos-section recuerdos-section-messages" data-section="messages-section"></section>
-        <section id="presentation-section" class="section recuerdos-section recuerdos-section-presentation bg-lavanda" data-section="presentation-section"></section>
         <section id="albums-section" class="section recuerdos-section recuerdos-section-albums" data-section="albums-section"></section>
+        <footer id="footer" class="section">
+            <h2 id="footer-names" class="nombres">Marcela y Jorge</h2>
+            <p id="footer-text" class="agradecimiento">Gracias por acompañarnos y compartir nuestra felicidad...</p>
+        </footer>
     `;
 
     const changeUserBtn = document.getElementById("change-user-btn");
@@ -617,42 +616,6 @@ function renderMessageBoardCards() {
             </div>
         </article>
     `).join("");
-}
-
-function renderPresentationSection() {
-    const section = document.getElementById("presentation-section");
-
-    if (!section) {
-        return;
-    }
-
-    section.innerHTML = `
-        <div class="recuerdos-section-copy">
-            <p class="recuerdos-section-kicker">Presentación</p>
-            <h2>Presentación</h2>
-            <p>Una presentación simple para revivir el evento.</p>
-        </div>
-
-        <div class="presentation-simple">
-            <button id="presentation-fullscreen-btn" class="btn-rectangular" type="button">Iniciar presentación</button>
-        </div>
-    `;
-
-    const button = document.getElementById("presentation-fullscreen-btn");
-    if (button) {
-        button.addEventListener("click", () => {
-            const target = document.getElementById("presentation-section");
-
-            if (target && target.requestFullscreen) {
-                target.requestFullscreen().catch(() => {
-            showToast("La presentación se abrirá cuando el navegador lo permita.", "default");
-                });
-                return;
-            }
-
-            showToast("La presentación está lista.", "default");
-        });
-    }
 }
 
 function getVisibleGuestAlbums() {
@@ -874,7 +837,6 @@ function renderAll() {
     updateLandingContent();
     renderOfficialPhotosSection();
     renderMessageBoardSection();
-    renderPresentationSection();
     renderAlbumsSection();
 }
 
@@ -1577,6 +1539,234 @@ function initializeToastInteractions() {
         videoButton.addEventListener("click", () => {
             simulatePersonalUpload("Video");
         });
+    }
+}
+
+function renderAlbumsSection() {
+    const section = document.getElementById("albums-section");
+
+    if (!section) {
+        return;
+    }
+
+    const profile = getStoredAccessProfile();
+    const isGuest = profile && profile.type === "guest" && profile.name;
+    const guestName = isGuest ? profile.name : "";
+    const demoAlbums = [
+        { ownerName: "Julieta" },
+        { ownerName: "Sofía" },
+        { ownerName: "Nicolás" },
+        { ownerName: "Camila" },
+        { ownerName: "Laura" }
+    ];
+
+    section.className = "section bg-lavanda recuerdos-center-section";
+    section.innerHTML = `
+        <i class="fa-solid fa-folder-open icon-evento" aria-hidden="true"></i>
+        <h2>Centro de Recuerdos</h2>
+        <p class="center-section-intro">${isGuest
+            ? "Desde aquí podés subir tus recuerdos y recorrer los álbumes de los demás invitados."
+            : "Desde aquí podés administrar el contenido compartido por los invitados y revisar todos los álbumes."}</p>
+
+        ${isGuest ? `
+            <div class="center-my-album">
+                <i class="fa-solid fa-folder-open center-my-album-icon" aria-hidden="true"></i>
+                <h3 id="personal-album-title">Mi Álbum - ${escapeHTML(guestName)}</h3>
+                <div class="center-my-album-actions" aria-label="Acciones del álbum personal">
+                    <button id="personal-upload-photos-btn" class="btn-rectangular" type="button">Subir fotografías</button>
+                    <button id="personal-upload-video-btn" class="btn-rectangular btn-secundario" type="button">Subir video</button>
+                </div>
+            </div>
+        ` : ""}
+
+        <div class="center-explore">
+            <h3>Explorar Álbumes</h3>
+
+            <div class="center-explore-tools">
+                <label class="center-search-field" for="guest-album-search">
+                    <span>Buscar por nombre</span>
+                    <input id="guest-album-search" type="search" autocomplete="off" placeholder="Escribí un nombre">
+                </label>
+
+                <button class="btn-rectangular btn-secundario center-presentation-btn" type="button">Presentación</button>
+            </div>
+
+            <div id="guest-albums-grid" class="center-albums-grid" aria-live="polite"></div>
+
+            <button class="btn-rectangular center-more-btn" type="button">Ver más álbumes</button>
+        </div>
+    `;
+
+    const searchInput = document.getElementById("guest-album-search");
+    const gridElement = document.getElementById("guest-albums-grid");
+
+    const renderDirectory = (query) => {
+        if (!gridElement) {
+            return;
+        }
+
+        const normalizedQuery = query.trim().toLowerCase();
+        const filteredAlbums = demoAlbums.filter((album) => album.ownerName.toLowerCase().includes(normalizedQuery));
+
+        gridElement.innerHTML = filteredAlbums.map((album) => `
+            <article class="center-album-item">
+                <i class="fa-solid fa-folder-open center-album-icon" aria-hidden="true"></i>
+                <h4 class="center-album-name">${escapeHTML(album.ownerName)}</h4>
+            </article>
+        `).join("");
+    };
+
+    if (searchInput) {
+        searchInput.oninput = (event) => renderDirectory(event.target.value);
+        renderDirectory(searchInput.value);
+    }
+}
+
+function renderAlbumsSection() {
+    const section = document.getElementById("albums-section");
+
+    if (!section) {
+        return;
+    }
+
+    const profile = getStoredAccessProfile();
+    const isGuest = profile && profile.type === "guest" && profile.name;
+    const guestName = isGuest ? profile.name : "";
+    const demoAlbums = ["Julieta", "Sofía", "Nicolás", "Camila", "Laura"];
+
+    section.className = "section bg-lavanda recuerdos-center-section";
+    section.innerHTML = `
+        <i class="fa-solid fa-folder-open icon-evento" aria-hidden="true"></i>
+        <h2>Centro de Recuerdos</h2>
+        <p class="center-section-intro">${isGuest
+            ? "Desde aquí podés subir tus recuerdos y recorrer los álbumes de los demás invitados."
+            : "Desde aquí podés administrar el contenido compartido por los invitados y revisar todos los álbumes."}</p>
+
+        ${isGuest ? `
+            <article class="center-my-album-card">
+                <i class="fa-solid fa-folder-open center-my-album-icon" aria-hidden="true"></i>
+                <h3 id="personal-album-title">Mi Álbum - ${escapeHTML(guestName)}</h3>
+                <div class="center-my-album-actions" aria-label="Acciones del álbum personal">
+                    <button id="personal-upload-photos-btn" class="btn-rectangular" type="button">Subir fotografías</button>
+                    <button id="personal-upload-video-btn" class="btn-rectangular btn-secundario" type="button">Subir video</button>
+                </div>
+            </article>
+        ` : ""}
+
+        <div class="center-explore">
+            <h3>Explorar Álbumes</h3>
+
+            <div class="center-explore-tools">
+                <label class="center-search-field" for="guest-album-search">
+                    <span>Buscar por nombre</span>
+                    <input id="guest-album-search" type="search" autocomplete="off" placeholder="Escribí un nombre">
+                </label>
+
+                <button class="btn-rectangular btn-secundario center-presentation-btn" type="button">Presentación</button>
+            </div>
+
+            <div id="guest-albums-grid" class="center-albums-grid" aria-live="polite"></div>
+
+            <button class="btn-rectangular btn-secundario center-more-btn" type="button">Ver más álbumes</button>
+        </div>
+    `;
+
+    const searchInput = document.getElementById("guest-album-search");
+    const gridElement = document.getElementById("guest-albums-grid");
+
+    const renderDirectory = (query) => {
+        if (!gridElement) {
+            return;
+        }
+
+        const normalizedQuery = query.trim().toLowerCase();
+        const filteredAlbums = demoAlbums.filter((ownerName) => ownerName.toLowerCase().includes(normalizedQuery));
+
+        gridElement.innerHTML = filteredAlbums.map((ownerName) => `
+            <article class="center-album-item">
+                <i class="fa-solid fa-folder-open center-album-icon" aria-hidden="true"></i>
+                <h4 class="center-album-name">${escapeHTML(ownerName)}</h4>
+            </article>
+        `).join("");
+    };
+
+    if (searchInput) {
+        searchInput.oninput = (event) => renderDirectory(event.target.value);
+        renderDirectory(searchInput.value);
+    }
+}
+
+function renderAlbumsSection() {
+    const section = document.getElementById("albums-section");
+
+    if (!section) {
+        return;
+    }
+
+    const profile = getStoredAccessProfile();
+    const isGuest = profile && profile.type === "guest" && profile.name;
+    const guestName = isGuest ? profile.name : "";
+    const demoAlbums = ["Julieta", "Sofía", "Nicolás", "Camila", "Laura"];
+
+    section.className = "section bg-lavanda recuerdos-center-section";
+    section.innerHTML = `
+        <i class="fa-solid fa-folder-open icon-evento" aria-hidden="true"></i>
+        <h2>Centro de Recuerdos</h2>
+        <p class="center-section-intro">${isGuest
+            ? "Desde aquí podés subir tus recuerdos y recorrer los álbumes de los demás invitados."
+            : "Desde aquí podés administrar el contenido compartido por los invitados y revisar todos los álbumes."}</p>
+
+        ${isGuest ? `
+            <article class="center-my-album-card">
+                <i class="fa-solid fa-folder-open center-my-album-icon" aria-hidden="true"></i>
+                <h3 id="personal-album-title">Mi Álbum - ${escapeHTML(guestName)}</h3>
+                <div class="center-my-album-actions" aria-label="Acciones del álbum personal">
+                    <button id="personal-upload-photos-btn" class="btn-rectangular" type="button">Subir fotografías</button>
+                    <button id="personal-upload-video-btn" class="btn-rectangular btn-secundario" type="button">Subir video</button>
+                </div>
+            </article>
+        ` : ""}
+
+        <div class="center-explore">
+            <h3>Explorar Álbumes</h3>
+
+            <div class="center-explore-tools">
+                <label class="center-search-field" for="guest-album-search">
+                    <span>Buscar por nombre</span>
+                    <input id="guest-album-search" type="search" autocomplete="off" placeholder="Escribí un nombre">
+                </label>
+
+                <button class="btn-rectangular btn-secundario center-presentation-btn" type="button">Presentación</button>
+            </div>
+
+            <div id="guest-albums-grid" class="center-albums-grid" aria-live="polite"></div>
+
+            <button class="btn-rectangular center-more-btn" type="button">Ver más álbumes</button>
+        </div>
+    `;
+
+    const searchInput = document.getElementById("guest-album-search");
+    const gridElement = document.getElementById("guest-albums-grid");
+
+    const renderDirectory = (query) => {
+        if (!gridElement) {
+            return;
+        }
+
+        const normalizedQuery = query.trim().toLowerCase();
+        const filteredAlbums = demoAlbums.filter((ownerName) => ownerName.toLowerCase().includes(normalizedQuery));
+
+        gridElement.innerHTML = filteredAlbums.map((ownerName) => `
+            <article class="center-album-item">
+                <i class="fa-solid fa-folder-open center-album-icon" aria-hidden="true"></i>
+                <h4 class="center-album-name">${escapeHTML(ownerName)}</h4>
+            </article>
+        `).join("");
+    };
+
+    if (searchInput) {
+        searchInput.oninput = (event) => renderDirectory(event.target.value);
+        renderDirectory(searchInput.value);
     }
 }
 
