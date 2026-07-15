@@ -183,6 +183,156 @@ function updateLandingContent() {
     welcomeTextElement.textContent = "No hay una sesión activa. Volvé a la invitación para ingresar como invitado o administrador.";
 }
 
+function openAccessModal() {
+    const accessModal = document.getElementById("access-modal");
+    if (!accessModal) {
+        return;
+    }
+
+    accessModal.hidden = false;
+    document.body.classList.add("modal-open");
+}
+
+function closeAccessModal() {
+    const accessModal = document.getElementById("access-modal");
+    if (!accessModal) {
+        return;
+    }
+
+    accessModal.hidden = true;
+    document.body.classList.remove("modal-open");
+}
+
+function showAccessFeedback(message) {
+    const feedbackElement = document.getElementById("access-feedback");
+    if (feedbackElement) {
+        feedbackElement.textContent = message;
+    }
+}
+
+function getCurrentAccessView() {
+    const successState = document.getElementById("access-modal-success");
+    if (successState && !successState.hidden) {
+        return "success";
+    }
+
+    const returningState = document.getElementById("access-modal-returning");
+    if (returningState && !returningState.hidden) {
+        return "returning";
+    }
+
+    return "welcome";
+}
+
+function setAccessView(view, profile = getStoredAccessProfile()) {
+    const welcomeState = document.getElementById("access-modal-welcome");
+    const returningState = document.getElementById("access-modal-returning");
+    const successState = document.getElementById("access-modal-success");
+    const guestForm = document.getElementById("guest-access-form");
+    const adminForm = document.getElementById("admin-access-form");
+    const guestOption = document.getElementById("guest-access-option");
+    const adminOption = document.getElementById("admin-access-option");
+    const returningName = document.getElementById("access-modal-returning-name");
+    const successName = document.getElementById("access-modal-success-name");
+    const continueBtn = document.getElementById("continue-session-btn");
+    const switchUserBtn = document.getElementById("switch-user-btn");
+    const openAdminFormBtn = document.getElementById("open-admin-form-btn");
+
+    if (!welcomeState || !returningState || !successState || !guestForm || !adminForm || !guestOption || !adminOption) {
+        return;
+    }
+
+    welcomeState.hidden = view !== "welcome";
+    returningState.hidden = view !== "returning";
+    successState.hidden = view !== "success";
+    guestForm.hidden = view !== "guest-form";
+    adminForm.hidden = view !== "admin-form";
+    showAccessFeedback("");
+
+    guestOption.classList.toggle("active", view === "guest-form");
+    adminOption.classList.toggle("active", view === "admin-form");
+
+    if (view === "returning") {
+        const isGuest = profile && profile.type === "guest";
+        const displayName = isGuest && profile.name ? profile.name : "administrador";
+
+        if (returningName) {
+            returningName.textContent = isGuest
+                ? "Tu sesión guardada es para " + profile.name + "."
+                : "Tu sesión de administrador sigue disponible en este dispositivo.";
+        }
+
+        if (continueBtn) {
+            continueBtn.textContent = isGuest ? "Continuar como " + profile.name : "Continuar como administrador";
+            continueBtn.dataset.sessionType = isGuest ? "guest" : "admin";
+        }
+
+        if (switchUserBtn) {
+            switchUserBtn.textContent = isGuest ? "Cambiar de usuario" : "Cerrar sesión";
+            switchUserBtn.dataset.sessionType = isGuest ? "guest" : "admin";
+        }
+
+        if (openAdminFormBtn) {
+            openAdminFormBtn.hidden = false;
+            openAdminFormBtn.textContent = "Ingresar como administrador";
+            openAdminFormBtn.dataset.sessionType = "admin";
+        }
+
+        returningState.dataset.sessionType = displayName;
+        return;
+    }
+
+    if (view === "success") {
+        if (successName) {
+            successName.textContent = profile && profile.type === "guest" && profile.name
+                ? "Hola, " + profile.name
+                : "Bienvenido";
+        }
+
+        if (openAdminFormBtn) {
+            openAdminFormBtn.hidden = true;
+        }
+
+        return;
+    }
+
+    if (openAdminFormBtn) {
+        openAdminFormBtn.hidden = true;
+    }
+
+    if (view === "welcome") {
+        guestOption.classList.add("active");
+        adminOption.classList.remove("active");
+    }
+
+    if (view === "guest-form") {
+        const guestNameInput = document.getElementById("guest-name");
+        if (guestNameInput) {
+            guestNameInput.focus();
+        }
+    }
+
+    if (view === "admin-form") {
+        const adminCodeInput = document.getElementById("admin-code");
+        if (adminCodeInput) {
+            adminCodeInput.focus();
+        }
+    }
+}
+
+function showAccessWelcome(profile = getStoredAccessProfile()) {
+    if (profile) {
+        setAccessView("returning", profile);
+        return;
+    }
+
+    setAccessView("welcome", null);
+}
+
+function showAccessSuccess(profile = getStoredAccessProfile()) {
+    setAccessView("success", profile);
+}
+
 function showToast(message, variant = "default") {
     const toastContainer = document.getElementById("toast-container");
 
@@ -554,7 +704,112 @@ function appendMockPersonalMedia(label) {
 
 function handleChangeUser() {
     clearAccessProfile();
-    window.location.href = "index.html";
+    showAccessWelcome(null);
+    openAccessModal();
+}
+
+function handleGuestAccess(event) {
+    event.preventDefault();
+
+    const guestName = document.getElementById("guest-name");
+    const eventCode = document.getElementById("event-code");
+    const guestNameValue = guestName ? guestName.value.trim() : "";
+    const eventCodeValue = eventCode ? eventCode.value.trim() : "";
+
+    if (!guestNameValue || eventCodeValue !== recuerdosConfig.access.eventCode) {
+        showAccessFeedback("Revisá tu nombre y el código del evento para ingresar.");
+        return;
+    }
+
+    const profile = {
+        name: guestNameValue,
+        type: "guest",
+        enteredAt: new Date().toISOString()
+    };
+
+    localStorage.setItem(accessStorageKey, JSON.stringify(profile));
+    ensurePersonalAlbum(profile.name);
+    updateLandingContent();
+    showAccessSuccess(profile);
+}
+
+function handleAdminAccess(event) {
+    event.preventDefault();
+
+    const adminCode = document.getElementById("admin-code");
+    const adminCodeValue = adminCode ? adminCode.value.trim() : "";
+
+    if (adminCodeValue !== recuerdosConfig.access.adminCode) {
+        showAccessFeedback("Revisá el código administrador para ingresar.");
+        return;
+    }
+
+    const profile = {
+        type: "admin",
+        enteredAt: new Date().toISOString()
+    };
+
+    localStorage.setItem(accessStorageKey, JSON.stringify(profile));
+    updateLandingContent();
+    closeAccessModal();
+}
+
+function initializeAccessFlow() {
+    const guestAccessOption = document.getElementById("guest-access-option");
+    const adminAccessOption = document.getElementById("admin-access-option");
+    const guestAccessForm = document.getElementById("guest-access-form");
+    const adminAccessForm = document.getElementById("admin-access-form");
+    const guestBackBtn = document.getElementById("guest-back-btn");
+    const adminBackBtn = document.getElementById("admin-back-btn");
+    const continueSessionBtn = document.getElementById("continue-session-btn");
+    const switchUserBtn = document.getElementById("switch-user-btn");
+    const openAdminFormBtn = document.getElementById("open-admin-form-btn");
+    const closeAccessSuccessBtn = document.getElementById("close-access-success-btn");
+
+    if (guestAccessOption) {
+        guestAccessOption.addEventListener("click", () => setAccessView("guest-form"));
+    }
+
+    if (adminAccessOption) {
+        adminAccessOption.addEventListener("click", () => setAccessView("admin-form"));
+    }
+
+    if (guestAccessForm) {
+        guestAccessForm.addEventListener("submit", handleGuestAccess);
+    }
+
+    if (adminAccessForm) {
+        adminAccessForm.addEventListener("submit", handleAdminAccess);
+    }
+
+    if (guestBackBtn) {
+        guestBackBtn.addEventListener("click", () => showAccessWelcome(getStoredAccessProfile()));
+    }
+
+    if (adminBackBtn) {
+        adminBackBtn.addEventListener("click", () => showAccessWelcome(getStoredAccessProfile()));
+    }
+
+    if (continueSessionBtn) {
+        continueSessionBtn.addEventListener("click", closeAccessModal);
+    }
+
+    if (switchUserBtn) {
+        switchUserBtn.addEventListener("click", handleChangeUser);
+    }
+
+    if (openAdminFormBtn) {
+        openAdminFormBtn.addEventListener("click", () => setAccessView("admin-form"));
+    }
+
+    if (closeAccessSuccessBtn) {
+        closeAccessSuccessBtn.addEventListener("click", closeAccessModal);
+    }
+
+    const storedProfile = getStoredAccessProfile();
+    showAccessWelcome(storedProfile);
+    updateLandingContent();
+    openAccessModal();
 }
 
 function syncHashNavigation() {
@@ -571,7 +826,12 @@ function syncHashNavigation() {
     }
 }
 
-document.getElementById("change-user-btn").addEventListener("click", handleChangeUser);
+const changeUserBtn = document.getElementById("change-user-btn");
+if (changeUserBtn) {
+    changeUserBtn.addEventListener("click", handleChangeUser);
+}
+
+initializeAccessFlow();
 initializeToastInteractions();
 renderAll();
 syncHashNavigation();

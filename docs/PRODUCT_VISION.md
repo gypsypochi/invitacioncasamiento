@@ -15,14 +15,15 @@ El producto no debe sentirse como una red social. Debe sentirse como una cápsul
 El flujo principal obligatorio es el siguiente:
 
 1. El usuario entra al enlace de la invitación.
-2. Se muestra el popup inicial con dos opciones visibles: `Entrar como invitado` y `Entrar como administrador`.
-3. Para pruebas y desarrollo existe un rol de `Superadministrador` oculto o restringido, pensado para cerrar sesión, cambiar de usuario, simular distintos usuarios y probar permisos.
-4. Si entra como invitado, ingresa su nombre y, cuando corresponda, el código del evento.
-5. El sistema guarda su identidad en el dispositivo y crea automáticamente su álbum personal.
-6. Luego aparece el saludo `Hola, [Nombre] ❤️`, con posibilidad de cerrarlo.
-7. Al cerrar ese mensaje, el usuario continúa recorriendo la misma página.
-8. El Centro de Recuerdos se abre como una página independiente desde las tarjetas de la invitación.
-9. Desde el Centro de Recuerdos se puede volver a la invitación principal sin perder la sesión.
+2. La invitación principal se muestra sin solicitar identificación.
+3. La sección del Centro de Recuerdos funciona como puerta de entrada visual hacia `centro-recuerdos.html`.
+4. Al ingresar a `centro-recuerdos.html` aparece el popup inicial con dos opciones visibles: `Entrar como invitado` y `Entrar como administrador`.
+5. Para pruebas y desarrollo existe un rol de `Superadministrador` oculto o restringido, pensado para cerrar sesión, cambiar de usuario, simular distintos usuarios y probar permisos.
+6. Si entra como invitado, ingresa su nombre y, cuando corresponda, el código del evento.
+7. El sistema guarda su identidad en el dispositivo y crea automáticamente su álbum personal.
+8. Luego aparece el saludo `Hola, [Nombre] ❤️`, con posibilidad de cerrarlo.
+9. Al cerrar ese mensaje, el usuario continúa recorriendo el Centro de Recuerdos.
+10. Desde el Centro de Recuerdos se puede volver a la invitación principal sin perder la sesión.
 
 Este flujo es la referencia principal para toda la experiencia del producto.
 
@@ -34,7 +35,7 @@ La invitación debe mantenerse como una sola experiencia vertical con este orden
 
 1. Portada con reproductor.
 2. Contador.
-3. Centro de Recuerdos.
+3. Centro de Recuerdos como puerta de entrada visual a la página independiente.
 4. Lugar y horario.
 5. Dress Code.
 6. Confirmación de asistencia.
@@ -49,7 +50,7 @@ No se deben eliminar, mover ni reemplazar las secciones existentes. El Centro de
 ## 4. Objetivos
 
 - Mantener la invitación digital como punto de entrada emocional.
-- Integrar el Centro de Recuerdos dentro del mismo recorrido.
+- Integrar el Centro de Recuerdos dentro del mismo recorrido sin pedir identificación en la invitación principal.
 - Permitir participación simple, sin cuentas tradicionales, email ni contraseña.
 - Ofrecer una experiencia clara para invitados, administradores y pruebas internas.
 - Preservar la velocidad, la estabilidad y la compatibilidad con Netlify.
@@ -125,14 +126,14 @@ No debe sentirse como una aplicación ajena a la invitación; debe sentirse como
 El flujo del invitado debe ser directo y sin fricción.
 
 1. Entra al enlace.
-2. Ve el popup inicial.
-3. Elige `Entrar como invitado`.
-4. Ingresa su nombre y el código del evento cuando corresponda.
-5. El sistema lo recuerda en el dispositivo.
-6. Se crea su álbum personal de forma automática.
-7. Se muestra el saludo `Hola, [Nombre] ❤️`.
-8. Al cerrar el saludo, continúa recorriendo la misma invitación.
-9. Llega al acceso al Centro de Recuerdos desde la invitación y entra en su página independiente.
+2. Recorre la invitación principal sin que se le pida identificación.
+3. Ingresa al Centro de Recuerdos desde la ilustración de acceso.
+4. Allí elige `Entrar como invitado`.
+5. Ingresa su nombre y el código del evento cuando corresponda.
+6. El sistema lo recuerda en el dispositivo.
+7. Se crea su álbum personal de forma automática.
+8. Se muestra el saludo `Hola, [Nombre] ❤️`.
+9. Al cerrar el saludo, continúa recorriendo el Centro de Recuerdos.
 
 Reglas del invitado:
 
@@ -265,7 +266,8 @@ No deben existir cuentas tradicionales ni contraseñas para invitados.
 La versión 1 debe consolidar la invitación digital con su Centro de Recuerdos integrado:
 
 - Entrada por el mismo enlace.
-- Popup de bienvenida con acceso de invitado y administrador.
+- La invitación principal funciona solo como puerta de entrada.
+- Popup de bienvenida con acceso de invitado y administrador dentro de `centro-recuerdos.html`.
 - Soporte interno restringido para superadministración.
 - Creación automática del álbum personal del invitado.
 - Saludo personalizado `Hola, [Nombre] ❤️`.
@@ -287,7 +289,7 @@ Estado: finalizado.
 
 Alcance completado:
 
-- Flujo de acceso con popup inicial.
+- Flujo de acceso con popup inicial dentro de `centro-recuerdos.html`.
 - Persistencia de identidad del invitado en el dispositivo.
 - Mensaje `Hola, [Nombre] ❤️` con posibilidad de cerrarlo.
 - Centro de Recuerdos separado en `centro-recuerdos.html`.

@@ -282,7 +282,58 @@ button, a {
 }
 
 .memories-preview {
-    padding-top: 0;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.memories-preview-shell {
+    max-width: 31.25rem;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.35rem;
+}
+
+.memories-header-simple {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+.memories-section-icon {
+    color: var(--color-dorado);
+    font-size: 1.45rem;
+    line-height: 1;
+}
+
+.recuerdos-preview-link {
+    display: block;
+    width: 100%;
+    border-radius: 30px;
+    overflow: hidden;
+    border: 0.0625rem solid rgba(197, 160, 89, 0.2);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(197, 161, 230, 0.16));
+    box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.08);
+}
+
+.recuerdos-preview-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    transform: none;
+}
+
+.recuerdos-preview-link:focus-visible {
+    outline: 0.2rem solid rgba(197, 160, 89, 0.35);
+    outline-offset: 0.2rem;
+}
+
+.memories-preview .memories-header {
+    margin-bottom: 0;
 }
 
 .recuerdos-home {

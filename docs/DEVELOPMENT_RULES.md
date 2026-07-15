@@ -65,19 +65,20 @@ Si una solicitud parece grande, debe dividirse antes de implementarse.
 Toda implementación relacionada con experiencia de usuario debe respetar este recorrido:
 
 1. El usuario entra al enlace de la invitación.
-2. Aparece el popup inicial con `Entrar como invitado` y `Entrar como administrador`.
+2. La invitación principal no solicita identificación.
 3. Existe un `Superadministrador` oculto o restringido solo para pruebas y desarrollo.
-4. El invitado ingresa su nombre y, cuando corresponda, el código del evento.
-5. El sistema guarda su identidad en el dispositivo y crea su álbum personal.
-6. Se muestra el saludo `Hola, [Nombre] ❤️`.
-7. Al cerrarlo, el usuario continúa recorriendo la misma página.
-8. El Centro de Recuerdos aparece como una sección integrada dentro del scroll.
-9. Desde el acceso al Centro de Recuerdos se navega entre:
+4. El usuario ingresa al Centro de Recuerdos desde la ilustración de acceso.
+5. Allí ingresa su nombre y, cuando corresponda, el código del evento.
+6. El sistema guarda su identidad en el dispositivo y crea su álbum personal.
+7. Se muestra el saludo `Hola, [Nombre] ❤️`.
+8. Al cerrarlo, el usuario continúa recorriendo el Centro de Recuerdos.
+9. El Centro de Recuerdos aparece como una página independiente.
+10. Desde el acceso al Centro de Recuerdos se navega entre:
    - Fotos de los Invitados
    - Fotos Profesionales
    - Muro de Comentarios y Saludos
    - Presentación
-10. Desde cualquier sección se puede volver al recorrido anterior sin perder la invitación.
+11. Desde cualquier sección se puede volver al recorrido anterior sin perder la invitación.
 
 Ningún cambio de experiencia debe contradecir este flujo.
 
