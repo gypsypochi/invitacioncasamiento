@@ -95,38 +95,63 @@
     <section id="centro-recuerdos-preview" class="section memories-preview bg-lavanda" hidden>
         <div class="memories-header">
             <p id="guest-greeting" class="guest-greeting" hidden></p>
-            <h2><i class="fa-solid fa-wand-magic-sparkles" style="color: var(--color-dorado); font-size: 0.8em; margin-right: 0.6rem;"></i>Reviví nuestro gran día</h2>
-            <p>Muy pronto vas a poder recorrer todos los recuerdos compartidos por familiares y amigos.</p>
+            <h2><i class="fa-solid fa-camera-retro" style="color: var(--color-dorado); font-size: 0.8em; margin-right: 0.6rem;"></i>Álbumes de invitados</h2>
+            <p>Recorré las portadas personales que cada invitado fue creando para guardar sus recuerdos.</p>
         </div>
 
-        <div class="memories-cards">
-            <article class="memory-card" aria-disabled="true">
-                <span class="memory-card-icon" aria-hidden="true"><i class="fa-solid fa-camera"></i></span>
-                <h3>Álbumes de invitados</h3>
-                <p>Cada invitado tendrá su propio álbum para compartir sus mejores recuerdos.</p>
-                <span class="coming-soon-label">Disponible próximamente</span>
-            </article>
+        <div class="guest-albums-toolbar">
+            <p class="guest-albums-summary" id="guest-albums-summary">Portadas visibles para los invitados con contenido activo.</p>
+        </div>
 
-            <article class="memory-card" aria-disabled="true">
-                <span class="memory-card-icon" aria-hidden="true"><i class="fa-solid fa-images"></i></span>
-                <h3>Álbum oficial</h3>
-                <p>Las fotografías profesionales del casamiento estarán disponibles aquí.</p>
-                <span class="coming-soon-label">Disponible próximamente</span>
-            </article>
+        <div id="guest-albums-grid" class="guest-albums-grid" aria-live="polite"></div>
 
-            <article class="memory-card" aria-disabled="true">
-                <span class="memory-card-icon" aria-hidden="true"><i class="fa-solid fa-comments"></i></span>
-                <h3>Mensajes</h3>
-                <p>Un espacio para dejar saludos, recuerdos y palabras para los novios.</p>
-                <span class="coming-soon-label">Disponible próximamente</span>
-            </article>
+        <div id="guest-albums-empty-state" class="album-empty-state" hidden>
+            <i class="fa-solid fa-camera-retro album-empty-icon" aria-hidden="true"></i>
+            <h3>Sin álbumes visibles todavía</h3>
+            <p>Cuando un invitado suba fotos o el video permitido, su portada aparecerá automáticamente en esta sección.</p>
+        </div>
 
-            <article class="memory-card" aria-disabled="true">
-                <span class="memory-card-icon" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
-                <h3>Presentación</h3>
-                <p>Disfrutá una presentación automática con los mejores momentos del casamiento.</p>
-                <span class="coming-soon-label">Disponible próximamente</span>
-            </article>
+        <article class="memory-card memory-card-highlight" aria-hidden="true">
+            <span class="memory-card-icon" aria-hidden="true"><i class="fa-solid fa-images"></i></span>
+            <h3>Vista colectiva</h3>
+            <p>Los álbumes aparecen ordenados en una grilla elegante para poder reconocer cada historia de un vistazo.</p>
+        </article>
+
+        <div class="personal-album-panel">
+            <div class="personal-album-header">
+                <p class="personal-album-kicker">Álbum personal</p>
+                <h3 id="personal-album-title">Tus recuerdos</h3>
+                <p id="personal-album-description" class="personal-album-description">Subí tus fotos y tu único video para mantenerlos ordenados en tu álbum propio.</p>
+            </div>
+
+            <div class="personal-album-actions" aria-label="Subida multimedia del álbum personal">
+                <button id="personal-upload-photos-btn" class="btn-rectangular" type="button"><i class="fa-solid fa-camera" aria-hidden="true" style="margin-right: 0.45rem;"></i>Subir fotos</button>
+                <button id="personal-upload-video-btn" class="btn-rectangular btn-secundario" type="button"><i class="fa-solid fa-video" aria-hidden="true" style="margin-right: 0.45rem;"></i>Subir video</button>
+            </div>
+
+            <div id="personal-album-media-list" class="personal-album-media-list" aria-live="polite"></div>
+
+            <div id="personal-album-empty-state" class="album-empty-state" hidden>
+                <i class="fa-solid fa-photo-film album-empty-icon" aria-hidden="true"></i>
+                <h3>Tu álbum está esperando recuerdos</h3>
+                <p>Las fotos y el video que subas quedarán agrupados acá para que vuelvas a verlos en cualquier momento.</p>
+            </div>
+        </div>
+
+        <div class="official-album-panel">
+            <div class="official-album-header">
+                <p class="official-album-kicker">Álbum oficial</p>
+                <h3>Selección de los novios</h3>
+                <p class="official-album-description">Una galería elegante con las fotos destacadas del casamiento, administrada desde la misma experiencia.</p>
+            </div>
+
+            <div id="official-album-grid" class="official-album-grid" aria-live="polite"></div>
+
+            <div id="official-album-empty-state" class="album-empty-state" hidden>
+                <i class="fa-solid fa-images album-empty-icon" aria-hidden="true"></i>
+                <h3>El álbum oficial todavía no tiene fotos</h3>
+                <p>Cuando los novios seleccionen imágenes destacadas, esta galería se poblará con su selección oficial.</p>
+            </div>
         </div>
     </section>
 

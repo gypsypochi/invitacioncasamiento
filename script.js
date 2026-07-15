@@ -48,6 +48,83 @@ const eventConfig = {
         eventCode: "MARCELA-JORGE-2026",
         adminCode: "NOVIOS-2026"
     },
+    guestAlbumPreviewSeed: [
+        {
+            id: "demo-1",
+            title: "Familia",
+            ownerName: "Cami",
+            photoCount: 14,
+            accentClass: "accent-rose",
+            initials: "FC"
+        },
+        {
+            id: "demo-2",
+            title: "Amigos",
+            ownerName: "Sofi",
+            photoCount: 9,
+            accentClass: "accent-lavender",
+            initials: "AS"
+        },
+        {
+            id: "demo-3",
+            title: "Mesa de fotos",
+            ownerName: "Nico",
+            photoCount: 11,
+            accentClass: "accent-sand",
+            initials: "MN"
+        },
+        {
+            id: "demo-4",
+            title: "Fiesta",
+            ownerName: "Lau",
+            photoCount: 7,
+            accentClass: "accent-plum",
+            initials: "LF"
+        }
+    ],
+    personalAlbumPreviewSeed: [
+        {
+            id: "local-photo-1",
+            kind: "photo",
+            title: "Entrada al salón",
+            meta: "Foto guardada en tu álbum",
+            iconClass: "fa-solid fa-image"
+        },
+        {
+            id: "local-photo-2",
+            kind: "photo",
+            title: "Brindis",
+            meta: "Foto guardada en tu álbum",
+            iconClass: "fa-solid fa-camera-retro"
+        },
+        {
+            id: "local-video-1",
+            kind: "video",
+            title: "Video único",
+            meta: "Tu único video permitido",
+            iconClass: "fa-solid fa-video"
+        }
+    ],
+    officialAlbumPreviewSeed: [
+        {
+            id: "official-1",
+            image: "assets/img-1.png",
+            title: "Entrada soñada",
+            meta: "Fotografía oficial seleccionada"
+        },
+        {
+            id: "official-2",
+            image: "assets/img-2.png",
+            title: "La noche",
+            meta: "Momento destacado del casamiento"
+        },
+        {
+            id: "official-3",
+            image: "assets/img-3.png",
+            title: "Recuerdo ilustrado",
+            meta: "Detalle visual del evento"
+        }
+    ],
     musicPlaylist: [
         {
             title: "Unchained Melody",
@@ -136,6 +213,174 @@ function saveAlbums(albums) {
     localStorage.setItem(albumStorageKey, JSON.stringify(albums));
 }
 
+function getGuestAlbumPreviewItems() {
+    const storedAlbums = getStoredAlbums().filter((album) => album.type === eventConfig.albumTemplates.guestAlbumType);
+    const albumsWithContent = storedAlbums.filter((album) => (album.photos && album.photos.length > 0) || album.video);
+
+    if (albumsWithContent.length > 0) {
+        return albumsWithContent.map((album, index) => ({
+            id: album.id,
+            title: album.title || ("Fotos de " + album.ownerName),
+            ownerName: album.ownerName,
+            photoCount: (album.photos ? album.photos.length : 0) + (album.video ? 1 : 0),
+            accentClass: ["accent-rose", "accent-lavender", "accent-sand", "accent-plum"][index % 4],
+            initials: album.ownerName
+                .split(" ")
+                .map((word) => word.charAt(0))
+                .slice(0, 2)
+                .join("")
+                .toUpperCase()
+        }));
+    }
+
+    return eventConfig.guestAlbumPreviewSeed;
+}
+
+function renderGuestAlbumsGrid() {
+    const gridElement = document.getElementById("guest-albums-grid");
+    const summaryElement = document.getElementById("guest-albums-summary");
+    const guestAlbums = getGuestAlbumPreviewItems();
+
+    gridElement.innerHTML = guestAlbums.map((album) => `
+        <article class="guest-album-card ${album.accentClass}">
+            <div class="guest-album-cover" aria-hidden="true">
+                <span class="guest-album-initials">${album.initials}</span>
+            </div>
+            <div class="guest-album-body">
+                <p class="guest-album-owner">${album.ownerName}</p>
+                <h3 class="guest-album-title">${album.title}</h3>
+                <p class="guest-album-meta">${album.photoCount} recuerdo${album.photoCount === 1 ? "" : "s"} compartido${album.photoCount === 1 ? "" : "s"}</p>
+            </div>
+        </article>
+    `).join("");
+
+    summaryElement.textContent = `${guestAlbums.length} portadas visibles en la grilla de invitados.`;
+}
+
+function getPersonalAlbumPreviewItems() {
+    const profile = getStoredAccessProfile();
+    const guestName = profile && profile.type === "guest" && profile.name ? profile.name : "Tu álbum";
+
+    const storedAlbums = getStoredAlbums().filter((album) => album.type === eventConfig.albumTemplates.guestAlbumType);
+    const activeAlbum = profile && profile.name
+        ? storedAlbums.find((album) => album.ownerName === profile.name)
+        : null;
+
+    if (activeAlbum && ((activeAlbum.photos && activeAlbum.photos.length > 0) || activeAlbum.video)) {
+        const photoItems = (activeAlbum.photos || []).map((photo, index) => ({
+            id: activeAlbum.id + "-photo-" + index,
+            kind: "photo",
+            title: photo.title || ("Foto " + (index + 1)),
+            meta: "Guardada en tu álbum",
+            iconClass: "fa-solid fa-image"
+        }));
+
+        const videoItems = activeAlbum.video ? [{
+            id: activeAlbum.id + "-video",
+            kind: "video",
+            title: activeAlbum.video.title || "Video único",
+            meta: "Guardado en tu álbum",
+            iconClass: "fa-solid fa-video"
+        }] : [];
+
+        return {
+            guestName,
+            items: [...photoItems, ...videoItems]
+        };
+    }
+
+    return {
+        guestName,
+        items: eventConfig.personalAlbumPreviewSeed
+    };
+}
+
+function renderPersonalAlbumPreview() {
+    const titleElement = document.getElementById("personal-album-title");
+    const descriptionElement = document.getElementById("personal-album-description");
+    const listElement = document.getElementById("personal-album-media-list");
+    const personalAlbum = getPersonalAlbumPreviewItems();
+
+    titleElement.textContent = personalAlbum.guestName === "Tu álbum"
+        ? "Tu álbum personal"
+        : "Tu álbum, " + personalAlbum.guestName;
+
+    descriptionElement.textContent = personalAlbum.guestName === "Tu álbum"
+        ? "Subí tus fotos y tu único video para mantenerlos ordenados en tu álbum propio."
+        : "Así se ve el álbum personal de " + personalAlbum.guestName + " con su contenido local.";
+
+    listElement.innerHTML = personalAlbum.items.map((item, index) => `
+        <article class="personal-media-card ${item.kind === "video" ? "is-video" : "is-photo"}">
+            <div class="personal-media-thumb personal-media-thumb-${(index % 4) + 1}">
+                <i class="${item.iconClass}" aria-hidden="true"></i>
+            </div>
+            <div class="personal-media-body">
+                <p class="personal-media-kind">${item.kind === "video" ? "Video" : "Foto"}</p>
+                <h4 class="personal-media-title">${item.title}</h4>
+                <p class="personal-media-meta">${item.meta}</p>
+            </div>
+        </article>
+    `).join("");
+}
+
+function renderOfficialAlbumPreview() {
+    const listElement = document.getElementById("official-album-grid");
+
+    listElement.innerHTML = eventConfig.officialAlbumPreviewSeed.map((item, index) => `
+        <article class="official-album-card ${index === 0 ? "is-featured" : ""}">
+            <div class="official-album-cover">
+                <img src="${item.image}" alt="${item.title}" loading="lazy">
+            </div>
+            <div class="official-album-body">
+                <p class="official-album-kind">Álbum oficial</p>
+                <h4 class="official-album-title">${item.title}</h4>
+                <p class="official-album-meta">${item.meta}</p>
+            </div>
+        </article>
+    `).join("");
+}
+
+function updateAlbumEmptyStates() {
+    const guestEmptyState = document.getElementById("guest-albums-empty-state");
+    const personalEmptyState = document.getElementById("personal-album-empty-state");
+    const officialEmptyState = document.getElementById("official-album-empty-state");
+
+    const guestHasContent = getGuestAlbumPreviewItems().length > 0;
+    const personalHasContent = getPersonalAlbumPreviewItems().items.length > 0;
+    const officialHasContent = eventConfig.officialAlbumPreviewSeed.length > 0;
+
+    guestEmptyState.hidden = guestHasContent;
+    personalEmptyState.hidden = personalHasContent;
+    officialEmptyState.hidden = officialHasContent;
+}
+
+function showToast(message, variant = "default") {
+    const toastContainer = document.getElementById("toast-container");
+    const toast = document.createElement("div");
+    const toastIconClass = variant === "success"
+        ? "fa-solid fa-circle-check"
+        : variant === "error"
+            ? "fa-solid fa-triangle-exclamation"
+            : "fa-solid fa-circle-info";
+
+    toast.className = "toast" + (variant === "success" ? " toast-success" : variant === "error" ? " toast-error" : "");
+    toast.innerHTML = `
+        <i class="${toastIconClass} toast-icon" aria-hidden="true"></i>
+        <span class="toast-message">${message}</span>
+    `;
+
+    toastContainer.appendChild(toast);
+
+    window.setTimeout(() => {
+        toast.classList.add("hide");
+        window.setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 400);
+    }, 3000);
+}
+
 function createPersonalAlbum(guestName) {
     const normalizedName = guestName.trim();
     const albums = getStoredAlbums();
@@ -159,6 +404,8 @@ function createPersonalAlbum(guestName) {
 
     albums.push(newAlbum);
     saveAlbums(albums);
+    renderGuestAlbumsGrid();
+    renderPersonalAlbumPreview();
     return newAlbum;
 }
 
@@ -190,6 +437,26 @@ function updateGuestGreeting() {
     } else {
         greetingElement.hidden = true;
     }
+}
+
+function renderMemoriesPreview() {
+    renderGuestAlbumsGrid();
+    renderPersonalAlbumPreview();
+    renderOfficialAlbumPreview();
+    updateAlbumEmptyStates();
+}
+
+function initializeToastInteractions() {
+    const photosButton = document.getElementById("personal-upload-photos-btn");
+    const videoButton = document.getElementById("personal-upload-video-btn");
+
+    photosButton.addEventListener("click", () => {
+        showToast("Vista previa lista: tus fotos quedarán ordenadas en tu álbum personal.", "success");
+    });
+
+    videoButton.addEventListener("click", () => {
+        showToast("Solo se permite un video por invitado. Esta pantalla lo respeta.", "error");
+    });
 }
 
 function handleGuestAccess(event) {
@@ -263,6 +530,7 @@ function showPostEventContent() {
     const previewSection = document.getElementById("centro-recuerdos-preview");
     previewSection.hidden = false;
     previewSection.classList.add("fade-in");
+    renderMemoriesPreview();
 }
 
 function updateCountdown() {
@@ -382,3 +650,5 @@ document.body.addEventListener("click", () => {
 // Inicializar primer track
 loadTrack(currentTrackIndex);
 audio.volume = volumeSlider.value;
+renderMemoriesPreview();
+initializeToastInteractions();
