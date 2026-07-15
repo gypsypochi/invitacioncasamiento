@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centro de Recuerdos</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="centro-recuerdos.css">
+</head>
+<body class="centro-recuerdos-page">
+    <main>
+        <header class="section recuerdos-landing bg-lavanda">
+            <div class="recuerdos-landing-shell">
+                <p class="recuerdos-landing-kicker">Centro de Recuerdos</p>
+                <h1 id="recuerdos-greeting" class="recuerdos-landing-title">Bienvenido al Centro de Recuerdos</h1>
+                <p id="recuerdos-welcome-text" class="recuerdos-landing-text">Un espacio emocional para guardar, recorrer y seguir construyendo los recuerdos del casamiento.</p>
+
+                <div class="recuerdos-landing-actions">
+                    <button id="change-user-btn" class="btn-rectangular btn-secundario" type="button">Cambiar de usuario</button>
+                    <a class="btn-rectangular" href="index.html">Volver a la invitación</a>
+                </div>
+
+                <div class="recuerdos-illustration" aria-hidden="true">
+                    <div class="recuerdos-illustration-frame">
+                        <i class="fa-solid fa-heart recuerdos-illustration-icon"></i>
+                        <p>Espacio reservado para una ilustración del Centro de Recuerdos.</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <section id="recuerdos-home" class="section recuerdos-home-section">
+            <div class="memories-header">
+                <h2><i class="fa-solid fa-heart" style="color: var(--color-dorado); font-size: 0.8em; margin-right: 0.6rem;"></i>Navegación inicial</h2>
+                <p>Elegí una tarjeta para abrir cada parte del Centro de Recuerdos y continuar el recorrido.</p>
+            </div>
+
+            <div class="recuerdos-grid" aria-label="Secciones principales del Centro de Recuerdos">
+                <a class="recuerdos-card recuerdos-card-link" href="#albumes-invitados">
+                    <span class="recuerdos-card-icon" aria-hidden="true"><i class="fa-solid fa-images"></i></span>
+                    <h3>Fotos de los Invitados</h3>
+                    <p>Tu álbum personal y los álbumes públicos de invitados.</p>
+                </a>
+
+                <a class="recuerdos-card recuerdos-card-link" href="#album-oficial">
+                    <span class="recuerdos-card-icon" aria-hidden="true"><i class="fa-solid fa-ring"></i></span>
+                    <h3>Fotos Profesionales</h3>
+                    <p>La selección oficial de los novios dentro de la nueva página.</p>
+                </a>
+
+                <a class="recuerdos-card recuerdos-card-link" href="#libro-mensajes">
+                    <span class="recuerdos-card-icon" aria-hidden="true"><i class="fa-solid fa-pen-to-square"></i></span>
+                    <h3>Muro de Comentarios y Saludos</h3>
+                    <p>El muro tipo Padlet preparado para mensajes y moderación.</p>
+                </a>
+
+                <a class="recuerdos-card recuerdos-card-link" href="#presentacion">
+                    <span class="recuerdos-card-icon" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
+                    <h3>Presentación</h3>
+                    <p>La secuencia inmersiva pensada para revivir el evento.</p>
+                </a>
+            </div>
+        </section>
+
+        <section id="albumes-invitados" class="section recuerdos-section">
+            <div class="recuerdos-section-card recuerdos-page-card">
+                <div class="recuerdos-page-header">
+                    <p class="recuerdos-section-kicker">Fotos de los Invitados</p>
+                    <h2>Mi Álbum y álbumes públicos</h2>
+                    <p>Tu álbum personal se crea automáticamente y los álbumes públicos muestran el contenido compartido por otros invitados.</p>
+                </div>
+
+                <div class="recuerdos-page-layout recuerdos-page-layout-guest">
+                    <div class="personal-album-panel">
+                        <div class="personal-album-header">
+                            <p class="personal-album-kicker">Mi Álbum</p>
+                            <h3 id="personal-album-title">Mi álbum</h3>
+                            <p id="personal-album-description" class="personal-album-description">Subí tus fotos y tu único video para mantenerlos ordenados en tu álbum propio.</p>
+                        </div>
+
+                        <div class="personal-album-actions" aria-label="Subida multimedia del álbum personal">
+                            <button id="personal-upload-photos-btn" class="btn-rectangular" type="button"><i class="fa-solid fa-camera" aria-hidden="true" style="margin-right: 0.45rem;"></i>Subir fotos</button>
+                            <button id="personal-upload-video-btn" class="btn-rectangular btn-secundario" type="button"><i class="fa-solid fa-video" aria-hidden="true" style="margin-right: 0.45rem;"></i>Subir video</button>
+                        </div>
+
+                        <div class="upload-progress" id="personal-upload-progress" hidden>
+                            <span class="upload-progress-label">Carga simulada</span>
+                            <div class="upload-progress-track" aria-hidden="true">
+                                <span class="upload-progress-bar" id="personal-upload-progress-bar"></span>
+                            </div>
+                            <span id="personal-upload-progress-text" class="upload-progress-text">0%</span>
+                        </div>
+
+                        <div id="personal-album-media-list" class="personal-album-media-list" aria-live="polite"></div>
+
+                        <div id="personal-album-empty-state" class="album-empty-state" hidden>
+                            <i class="fa-solid fa-photo-film album-empty-icon" aria-hidden="true"></i>
+                            <h3>Tu álbum está esperando recuerdos</h3>
+                            <p>Cuando subas la primera foto, este espacio quedará asociado a tu identidad y será visible para el resto de los invitados.</p>
+                        </div>
+                    </div>
+
+                    <div class="guest-albums-panel">
+                        <div class="guest-albums-toolbar">
+                            <p class="guest-albums-summary" id="guest-albums-summary">Álbumes visibles para los invitados con contenido activo.</p>
+                        </div>
+
+                        <div id="guest-albums-grid" class="guest-albums-grid" aria-live="polite"></div>
+
+                        <div id="guest-albums-empty-state" class="album-empty-state" hidden>
+                            <i class="fa-solid fa-camera-retro album-empty-icon" aria-hidden="true"></i>
+                            <h3>Sin álbumes visibles todavía</h3>
+                            <p>Cuando un invitado comparta su primera foto, su álbum aparecerá automáticamente en esta sección.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <a class="btn-rectangular recuerdos-back-btn" href="#recuerdos-home">Volver al inicio</a>
+            </div>
+        </section>
+
+        <section id="album-oficial" class="section recuerdos-section">
+            <div class="recuerdos-section-card recuerdos-page-card">
+                <div class="recuerdos-page-header">
+                    <p class="recuerdos-section-kicker">Fotos Profesionales</p>
+                    <h2>Álbum Oficial</h2>
+                    <p>La galería oficial pertenece a los novios y muestra una vista distinta según el rol activo en el dispositivo.</p>
+                </div>
+
+                <div class="official-view-mode" id="official-view-mode" aria-live="polite"></div>
+
+                <div class="official-album-panel">
+                    <div class="official-album-header">
+                        <p class="official-album-kicker">Selección oficial</p>
+                        <h3 id="official-album-title">Galería de los novios</h3>
+                        <p id="official-album-description" class="official-album-description">Una selección curada con fotos destacadas del casamiento.</p>
+                    </div>
+
+                    <div class="official-album-grid" id="official-album-grid" aria-live="polite"></div>
+                    <div class="official-album-actions" id="official-album-actions"></div>
+
+                    <div id="official-album-empty-state" class="album-empty-state" hidden>
+                        <i class="fa-solid fa-images album-empty-icon" aria-hidden="true"></i>
+                        <h3>El álbum oficial todavía no tiene fotos</h3>
+                        <p>Cuando se conecte la lógica del próximo Sprint, esta galería quedará administrada por los novios desde la misma experiencia.</p>
+                    </div>
+                </div>
+
+                <a class="btn-rectangular recuerdos-back-btn" href="#recuerdos-home">Volver al inicio</a>
+            </div>
+        </section>
+
+        <section id="libro-mensajes" class="section recuerdos-section">
+            <div class="recuerdos-section-card recuerdos-page-card">
+                <div class="recuerdos-page-header">
+                    <p class="recuerdos-section-kicker">Muro de Comentarios y Saludos</p>
+                    <h2>Muro de Comentarios y Saludos</h2>
+                    <p>Un muro visual tipo Padlet para dejar saludos, mensajes breves y recuerdos compartidos con los novios.</p>
+                </div>
+
+                <div class="message-board-shell">
+                    <div class="message-board-composer">
+                        <p class="message-board-kicker">Dejar un mensaje</p>
+                        <h3>Tu saludo aparecerá en el muro</h3>
+                        <p>Esta vista deja preparada la experiencia para la carga y moderación posterior.</p>
+                    </div>
+                    <div id="message-board-grid" class="message-board-grid" aria-live="polite"></div>
+                </div>
+
+                <a class="btn-rectangular recuerdos-back-btn" href="#recuerdos-home">Volver al inicio</a>
+            </div>
+        </section>
+
+        <section id="presentacion" class="section recuerdos-section">
+            <div class="recuerdos-section-card recuerdos-page-card presentation-page-card">
+                <div class="recuerdos-page-header">
+                    <p class="recuerdos-section-kicker">Presentación</p>
+                    <h2>Secuencia automática</h2>
+                    <p>Una presentación inmersiva con fotos temporales y transición automática, pensada para acompañar la música existente.</p>
+                </div>
+
+                <div class="presentation-stage" aria-live="polite">
+                    <div class="presentation-visual">
+                        <img id="presentation-slide-image" src="assets/img-1.png" alt="Presentación del recuerdo">
+                    </div>
+                    <div class="presentation-overlay">
+                        <p id="presentation-slide-kicker" class="presentation-kicker">Centro de Recuerdos</p>
+                        <h3 id="presentation-slide-title">Reviviendo el evento</h3>
+                        <p id="presentation-slide-text">Las fotos irán alternando automáticamente cuando esta experiencia se conecte con los recuerdos reales.</p>
+                    </div>
+                </div>
+
+                <div class="presentation-thumbs" id="presentation-thumbs" aria-hidden="true"></div>
+
+                <a class="btn-rectangular recuerdos-back-btn" href="#recuerdos-home">Volver al inicio</a>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <script src="centro-recuerdos.js"></script>
+</body>
+</html>

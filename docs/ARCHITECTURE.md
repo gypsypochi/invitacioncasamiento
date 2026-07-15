@@ -13,7 +13,7 @@ La aplicación debe seguir siendo una web estática construida con:
 Netlify hospeda el frontend.
 Firebase actúa como Backend as a Service para persistencia, almacenamiento y reglas de seguridad.
 
-La arquitectura debe sostener una experiencia única: una invitación digital que se transforma en un Centro de Recuerdos sin cambiar el enlace principal.
+La arquitectura debe sostener una experiencia única: una invitación digital que integra el Centro de Recuerdos dentro del mismo recorrido y sin cambiar el enlace principal.
 
 ---
 
@@ -30,9 +30,9 @@ Responsabilidades:
 - Pedir nombre y código del evento cuando corresponda.
 - Recordar la identidad del invitado en el dispositivo.
 - Mostrar el saludo `Hola, [Nombre] ❤️`.
-- Renderizar el Home del Centro de Recuerdos.
-- Permitir navegación entre las cuatro secciones principales.
-- Mantener la opción de volver atrás hasta el Home desde cualquier sección.
+- Mantener el scroll único de la invitación principal.
+- Actuar como puerta de entrada al Centro de Recuerdos.
+- Permitir navegación hacia la página independiente del Centro de Recuerdos.
 
 ### Firebase
 
@@ -82,7 +82,7 @@ Responsabilidades:
 
 - Presentar la información inicial del casamiento.
 - Conservar la estética emocional de la invitación.
-- Servir como puerta de acceso al resto del producto.
+- Servir como recorrido principal de una sola página.
 
 ### Acceso
 
@@ -96,17 +96,17 @@ Responsabilidades:
 - Validar nombre y código del evento cuando corresponda.
 - Persistir la identidad del invitado en el dispositivo.
 
-### Home del Centro de Recuerdos
+### Centro de Recuerdos
 
-Centro de navegación principal.
+Página independiente accesible desde la invitación.
 
 Responsabilidades:
 
 - Mostrar cuatro tarjetas principales.
-- Llevar al usuario a cada sección.
-- Actuar como punto de regreso universal.
+- Llevar al usuario a cada subsección.
+- Mantener continuidad visual con el resto del proyecto.
 
-### Álbumes de invitados
+### Fotos de los Invitados
 
 Módulo colaborativo principal.
 
@@ -127,7 +127,7 @@ Responsabilidades:
 - Alojar contenido curado del evento.
 - Permitir alta, edición, borrado y reorganización solo al administrador.
 
-### Muro de comentarios y saludos
+### Muro de Comentarios y Saludos
 
 Módulo de mensajes tipo Padlet.
 
@@ -244,9 +244,9 @@ Relaciones:
 La navegación debe respetar estas propiedades:
 
 - Desde el popup inicial se ingresa al rol elegido.
-- Desde el saludo de bienvenida se accede al Home.
-- Desde el Home se entra a cada sección principal.
-- Desde cualquier sección se puede volver atrás hasta el Home.
+- Desde el saludo de bienvenida se continúa recorriendo la misma página.
+- El Centro de Recuerdos se abre como página independiente desde la invitación.
+- Desde cualquier subsección se puede volver al recorrido principal o a la invitación.
 
 Esto debe mantenerse como una constante arquitectónica.
 
@@ -288,7 +288,7 @@ No puede:
 Puede:
 
 - Administrar el álbum oficial.
-- Moderar el muro.
+- Moderar el libro de mensajes.
 - Eliminar contenido incorrecto.
 - Corregir nombres cuando corresponda.
 
@@ -324,9 +324,10 @@ La estructura futura del proyecto debe mantenerse simple.
 
 - Invitación.
 - Acceso.
-- Home.
-- Álbumes.
-- Muro de mensajes.
+- Centro de Recuerdos.
+- Fotos de los Invitados.
+- Fotos Profesionales.
+- Muro de Comentarios y Saludos.
 - Presentación.
 - Administración.
 - Integración Firebase.
@@ -349,10 +350,10 @@ La V1 debe consolidar:
 - El popup inicial con dos roles visibles.
 - El superadministrador restringido para pruebas.
 - El saludo personalizado.
-- El Home con cuatro secciones.
-- Los álbumes de invitados con visibilidad progresiva.
-- El álbum oficial administrado por novios.
-- El muro de mensajes tipo Padlet.
-- La presentación a pantalla completa con música existente.
+- El Centro de Recuerdos separado en su propia página y accesible desde la invitación.
+- Las fotos de los invitados con visibilidad progresiva.
+- Las fotos profesionales administradas por novios.
+- El muro de comentarios y saludos tipo Padlet.
+- La presentación con música existente.
 
 El objetivo no es construir una red social. El objetivo es preservar y revivir recuerdos del casamiento dentro de una experiencia única, sensible y ordenada.

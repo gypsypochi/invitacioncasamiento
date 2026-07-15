@@ -21,17 +21,37 @@
 
     <div id="access-modal" class="access-modal" role="dialog" aria-modal="true" aria-labelledby="access-modal-title">
         <div class="access-modal-card">
-            <p class="access-modal-kicker">Centro de Recuerdos</p>
-            <h2 id="access-modal-title"><i class="fa-solid fa-heart" style="color: var(--color-dorado); font-size: 0.85em; margin-right: 0.5rem;"></i>Bienvenidos nuevamente</h2>
-            <p class="access-modal-text">Nuestro casamiento ya forma parte de nuestros recuerdos.</p>
-            <p class="access-modal-text">Elegí cómo querés ingresar para comenzar a revivir este momento junto a nosotros.</p>
+            <div id="access-modal-welcome" class="access-modal-state">
+                <p class="access-modal-kicker">Centro de Recuerdos</p>
+                <h2 id="access-modal-title"><i class="fa-solid fa-heart" style="color: var(--color-dorado); font-size: 0.85em; margin-right: 0.5rem;"></i>Bienvenidos</h2>
+                <p class="access-modal-text">Entrá como invitado para recuperar tu identidad en el dispositivo o como administrador para gestionar el recuerdo compartido.</p>
 
-            <div class="access-options" aria-label="Opciones de ingreso">
-                <button id="guest-access-option" class="access-option active" type="button"><i class="fa-solid fa-users" style="margin-right: 0.5rem;"></i>Soy invitado</button>
-                <button id="admin-access-option" class="access-option" type="button"><i class="fa-solid fa-ring" style="margin-right: 0.5rem;"></i>Somos los novios</button>
+                <div class="access-options" aria-label="Opciones de ingreso">
+                    <button id="guest-access-option" class="access-option active" type="button"><i class="fa-solid fa-users" style="margin-right: 0.5rem;"></i>Entrar como invitado</button>
+                    <button id="admin-access-option" class="access-option" type="button"><i class="fa-solid fa-ring" style="margin-right: 0.5rem;"></i>Entrar como administrador</button>
+                </div>
             </div>
 
-            <form id="guest-access-form" class="access-form">
+            <div id="access-modal-returning" class="access-modal-state" hidden>
+                <p class="access-modal-kicker">Centro de Recuerdos</p>
+                <h2 id="access-modal-returning-title"><i class="fa-solid fa-heart" style="color: var(--color-dorado); font-size: 0.85em; margin-right: 0.5rem;"></i>Bienvenido nuevamente ❤️</h2>
+                <p id="access-modal-returning-name" class="access-modal-text"></p>
+
+                <div class="returning-actions">
+                    <button id="continue-session-btn" class="btn-rectangular" type="button">Continuar</button>
+                    <button id="switch-user-btn" class="btn-rectangular btn-secundario" type="button">Cambiar de usuario</button>
+                    <button id="open-admin-form-btn" class="btn-rectangular btn-secundario" type="button">Ingresar como administrador</button>
+                </div>
+            </div>
+
+            <div id="access-modal-success" class="access-modal-state" hidden>
+                <p class="access-modal-kicker">Centro de Recuerdos</p>
+                <h2 id="access-modal-success-title"><i class="fa-solid fa-heart" style="color: var(--color-dorado); font-size: 0.85em; margin-right: 0.5rem;"></i><span id="access-modal-success-name"></span> ❤️</h2>
+                <p class="access-modal-text">Tu identidad quedó guardada en este dispositivo. Podés cerrar este mensaje y seguir recorriendo la invitación.</p>
+                <button id="close-access-success-btn" class="btn-rectangular" type="button">Cerrar</button>
+            </div>
+
+            <form id="guest-access-form" class="access-form" hidden>
                 <p class="access-form-question">¿Cómo querés que aparezca tu álbum?</p>
                 <label for="guest-name">Nombre</label>
                 <input id="guest-name" name="guest-name" type="text" autocomplete="name" required>
@@ -39,7 +59,8 @@
                 <label for="event-code">Código del evento</label>
                 <input id="event-code" name="event-code" type="text" autocomplete="off" required>
 
-                <button class="btn-rectangular" type="submit">Ingresar</button>
+                <button class="btn-rectangular" type="submit">Ingresar como invitado</button>
+                <button id="guest-back-btn" class="access-back-btn" type="button">Volver</button>
             </form>
 
             <form id="admin-access-form" class="access-form" hidden>
@@ -47,6 +68,7 @@
                 <input id="admin-code" name="admin-code" type="text" autocomplete="off" required>
 
                 <button class="btn-rectangular" type="submit">Ingresar como administrador</button>
+                <button id="admin-back-btn" class="access-back-btn" type="button">Volver</button>
             </form>
 
             <p id="access-feedback" class="access-feedback" aria-live="polite"></p>
@@ -92,66 +114,36 @@
         </div>
     </section>
 
-    <section id="centro-recuerdos-preview" class="section memories-preview bg-lavanda" hidden>
+    <section id="centro-recuerdos-preview" class="section memories-preview bg-lavanda">
         <div class="memories-header">
-            <p id="guest-greeting" class="guest-greeting" hidden></p>
-            <h2><i class="fa-solid fa-camera-retro" style="color: var(--color-dorado); font-size: 0.8em; margin-right: 0.6rem;"></i>Álbumes de invitados</h2>
-            <p>Recorré las portadas personales que cada invitado fue creando para guardar sus recuerdos.</p>
+            <h2><i class="fa-solid fa-heart" style="color: var(--color-dorado); font-size: 0.8em; margin-right: 0.6rem;"></i>Centro de Recuerdos</h2>
+            <p>El acceso al Centro de Recuerdos continúa en una página independiente. Elegí una tarjeta para entrar.</p>
         </div>
 
-        <div class="guest-albums-toolbar">
-            <p class="guest-albums-summary" id="guest-albums-summary">Portadas visibles para los invitados con contenido activo.</p>
-        </div>
+        <div class="recuerdos-grid" aria-label="Secciones principales del Centro de Recuerdos">
+            <a class="recuerdos-card recuerdos-card-link" href="centro-recuerdos.html#albumes-invitados">
+                <span class="recuerdos-card-icon" aria-hidden="true"><i class="fa-solid fa-images"></i></span>
+                <h3>Fotos de los Invitados</h3>
+                <p>Entrá al álbum personal de cada invitado y continuá el recorrido desde su propia mirada.</p>
+            </a>
 
-        <div id="guest-albums-grid" class="guest-albums-grid" aria-live="polite"></div>
+            <a class="recuerdos-card recuerdos-card-link" href="centro-recuerdos.html#album-oficial">
+                <span class="recuerdos-card-icon" aria-hidden="true"><i class="fa-solid fa-ring"></i></span>
+                <h3>Fotos Profesionales</h3>
+                <p>Recorré la selección oficial de los novios dentro de la nueva página del Centro de Recuerdos.</p>
+            </a>
 
-        <div id="guest-albums-empty-state" class="album-empty-state" hidden>
-            <i class="fa-solid fa-camera-retro album-empty-icon" aria-hidden="true"></i>
-            <h3>Sin álbumes visibles todavía</h3>
-            <p>Cuando un invitado suba fotos o el video permitido, su portada aparecerá automáticamente en esta sección.</p>
-        </div>
+            <a class="recuerdos-card recuerdos-card-link" href="centro-recuerdos.html#libro-mensajes">
+                <span class="recuerdos-card-icon" aria-hidden="true"><i class="fa-solid fa-pen-to-square"></i></span>
+                <h3>Muro de Comentarios y Saludos</h3>
+                <p>Dejá mensajes, mirá saludos y seguí el recorrido hacia el muro tipo Padlet.</p>
+            </a>
 
-        <article class="memory-card memory-card-highlight" aria-hidden="true">
-            <span class="memory-card-icon" aria-hidden="true"><i class="fa-solid fa-images"></i></span>
-            <h3>Vista colectiva</h3>
-            <p>Los álbumes aparecen ordenados en una grilla elegante para poder reconocer cada historia de un vistazo.</p>
-        </article>
-
-        <div class="personal-album-panel">
-            <div class="personal-album-header">
-                <p class="personal-album-kicker">Álbum personal</p>
-                <h3 id="personal-album-title">Tus recuerdos</h3>
-                <p id="personal-album-description" class="personal-album-description">Subí tus fotos y tu único video para mantenerlos ordenados en tu álbum propio.</p>
-            </div>
-
-            <div class="personal-album-actions" aria-label="Subida multimedia del álbum personal">
-                <button id="personal-upload-photos-btn" class="btn-rectangular" type="button"><i class="fa-solid fa-camera" aria-hidden="true" style="margin-right: 0.45rem;"></i>Subir fotos</button>
-                <button id="personal-upload-video-btn" class="btn-rectangular btn-secundario" type="button"><i class="fa-solid fa-video" aria-hidden="true" style="margin-right: 0.45rem;"></i>Subir video</button>
-            </div>
-
-            <div id="personal-album-media-list" class="personal-album-media-list" aria-live="polite"></div>
-
-            <div id="personal-album-empty-state" class="album-empty-state" hidden>
-                <i class="fa-solid fa-photo-film album-empty-icon" aria-hidden="true"></i>
-                <h3>Tu álbum está esperando recuerdos</h3>
-                <p>Las fotos y el video que subas quedarán agrupados acá para que vuelvas a verlos en cualquier momento.</p>
-            </div>
-        </div>
-
-        <div class="official-album-panel">
-            <div class="official-album-header">
-                <p class="official-album-kicker">Álbum oficial</p>
-                <h3>Selección de los novios</h3>
-                <p class="official-album-description">Una galería elegante con las fotos destacadas del casamiento, administrada desde la misma experiencia.</p>
-            </div>
-
-            <div id="official-album-grid" class="official-album-grid" aria-live="polite"></div>
-
-            <div id="official-album-empty-state" class="album-empty-state" hidden>
-                <i class="fa-solid fa-images album-empty-icon" aria-hidden="true"></i>
-                <h3>El álbum oficial todavía no tiene fotos</h3>
-                <p>Cuando los novios seleccionen imágenes destacadas, esta galería se poblará con su selección oficial.</p>
-            </div>
+            <a class="recuerdos-card recuerdos-card-link" href="centro-recuerdos.html#presentacion">
+                <span class="recuerdos-card-icon" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
+                <h3>Presentación</h3>
+                <p>Viví la secuencia automática que mezclará fotos y música del evento.</p>
+            </a>
         </div>
     </section>
 

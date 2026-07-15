@@ -262,7 +262,7 @@ button, a {
     margin-bottom: 0.625rem; 
 }
 
-/* --- 11. CENTRO DE RECUERDOS (Próximamente) --- */
+/* --- 11. CENTRO DE RECUERDOS --- */
 .post-event-message {
     max-width: 46rem;
     margin: 2.5rem auto 0 auto;
@@ -285,18 +285,235 @@ button, a {
     padding-top: 0;
 }
 
-.memories-header {
+.recuerdos-home {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding-top: 2rem;
+}
+
+.recuerdos-header {
+    max-width: 46rem;
+}
+
+.recuerdos-kicker {
+    color: var(--color-dorado);
+    font-size: 0.8rem;
+    letter-spacing: 0.18rem;
+    margin-bottom: 0.65rem;
+    text-transform: uppercase;
+}
+
+.recuerdos-header-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.25rem;
+}
+
+.recuerdos-session-btn {
+    margin-top: 0;
+}
+
+.recuerdos-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+    margin: 0 auto;
+}
+
+.recuerdos-card {
+    appearance: none;
+    border: 0.0625rem solid rgba(197, 160, 89, 0.2);
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(235, 224, 206, 0.95));
+    box-shadow: 0 0.75rem 1.75rem rgba(0, 0, 0, 0.06);
+    padding: 1.5rem 1.2rem 1.3rem 1.2rem;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-height: 100%;
+    cursor: pointer;
+    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.recuerdos-card-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.recuerdos-card:hover {
+    transform: translateY(-6px);
+    border-color: var(--color-dorado);
+    box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.1);
+}
+
+.recuerdos-card-icon {
+    width: 3.2rem;
+    height: 3.2rem;
+    border-radius: 50%;
+    background: rgba(197, 160, 89, 0.12);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-dorado);
+    font-size: 1.2rem;
+}
+
+.recuerdos-card h3 {
+    font-size: 1.25rem;
+    margin-top: 0.2rem;
+}
+
+.recuerdos-card p {
+    color: #555;
+    font-size: 0.95rem;
+    font-style: normal;
+}
+
+.recuerdos-card-status {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    background: rgba(197, 161, 230, 0.18);
+    color: #6f4a92;
+    font-size: 0.72rem;
+    letter-spacing: 0.12rem;
+    padding: 0.45rem 0.75rem;
+    text-transform: uppercase;
+}
+
+.recuerdos-section {
+    max-width: 72rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}
+
+.recuerdos-section-card {
     max-width: 42rem;
-    margin: 0 auto 2.5rem auto;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 0.0625rem solid rgba(197, 160, 89, 0.18);
+    box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.06);
+}
+
+.recuerdos-section-kicker {
+    color: var(--color-dorado);
+    font-size: 0.78rem;
+    letter-spacing: 0.16rem;
+    margin-bottom: 0.65rem;
+    text-transform: uppercase;
+}
+
+.recuerdos-section-card h2 {
+    font-size: 2.6rem;
+    margin-bottom: 0.8rem;
+}
+
+.recuerdos-section-card p {
+    color: #555;
+    font-size: 1rem;
+    font-style: italic;
+    margin-bottom: 1.5rem;
+}
+
+.recuerdos-page-card {
+    max-width: 72rem;
+}
+
+.recuerdos-page-header {
+    max-width: 44rem;
+    margin: 0 auto 1.75rem auto;
+    text-align: center;
+}
+
+.recuerdos-page-header h2 {
+    font-size: 2.7rem;
+    margin-bottom: 0.75rem;
+}
+
+.recuerdos-page-header p {
+    color: #555;
+    font-size: 1rem;
+    font-style: italic;
+    margin-bottom: 0;
+}
+
+.recuerdos-page-layout {
+    display: grid;
+    gap: 1.5rem;
+    margin-bottom: 1.75rem;
+}
+
+.recuerdos-page-layout-guest {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+}
+
+.guest-albums-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.recuerdos-back-btn {
+    margin-top: 0;
+}
+
+.recuerdos-section[hidden] {
+    display: none;
+}
+
+.returning-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.returning-actions .btn-secundario {
+    margin-left: 0;
+}
+
+.access-modal-state {
+    display: flex;
+    flex-direction: column;
+}
+
+.access-modal-state[hidden] {
+    display: none;
+}
+
+.access-modal-card .returning-actions .btn-rectangular {
+    margin-top: 0;
+}
+
+#access-modal-success {
+    align-items: center;
+    text-align: center;
+}
+
+#access-modal-success .btn-rectangular {
+    align-self: center;
+    min-width: 12rem;
+}
+
+.memories-header {
+    max-width: 48rem;
+    margin: 0 auto 2.2rem auto;
+    text-align: center;
 }
 
 .memories-header h2 {
     font-size: 3rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.9rem;
 }
 
 .memories-header p {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-style: italic;
 }
 
@@ -318,6 +535,43 @@ button, a {
     font-size: 0.9rem;
     padding: 0.6rem 1rem;
     max-width: 100%;
+}
+
+.upload-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    margin: 0 0 1.15rem 0;
+}
+
+.upload-progress-label {
+    color: var(--color-dorado);
+    font-size: 0.76rem;
+    letter-spacing: 0.14rem;
+    text-transform: uppercase;
+}
+
+.upload-progress-track {
+    position: relative;
+    overflow: hidden;
+    height: 0.9rem;
+    border-radius: 999px;
+    background: rgba(197, 160, 89, 0.18);
+}
+
+.upload-progress-bar {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--color-dorado), rgba(197, 161, 230, 0.95));
+    transition: width 0.12s linear;
+}
+
+.upload-progress-text {
+    align-self: flex-end;
+    color: #555;
+    font-size: 0.88rem;
 }
 
 .guest-greeting {
@@ -610,6 +864,81 @@ button, a {
     font-style: italic;
 }
 
+.official-view-mode {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.official-mode-badge {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.95rem 1.25rem;
+    border-radius: 999px;
+    border: 0.0625rem solid rgba(197, 160, 89, 0.22);
+    background: rgba(255, 255, 255, 0.82);
+    text-align: center;
+}
+
+.official-mode-badge.is-admin {
+    border-color: rgba(143, 108, 191, 0.35);
+    background: rgba(197, 161, 230, 0.16);
+}
+
+.official-mode-label {
+    color: var(--color-dorado);
+    font-size: 0.76rem;
+    letter-spacing: 0.16rem;
+    text-transform: uppercase;
+}
+
+.official-mode-text {
+    color: #555;
+    font-size: 0.92rem;
+}
+
+.official-album-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.65rem;
+    margin-bottom: 1.25rem;
+}
+
+.official-tool-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.55rem 0.9rem;
+    border-radius: 999px;
+    background: rgba(197, 161, 230, 0.16);
+    border: 0.0625rem solid rgba(143, 108, 191, 0.22);
+    color: #6f4a92;
+    font-size: 0.82rem;
+    letter-spacing: 0.08rem;
+    text-transform: uppercase;
+}
+
+.official-readonly-note {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+}
+
+.official-readonly-note p {
+    margin: 0;
+    max-width: 34rem;
+    padding: 0.95rem 1rem;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.74);
+    border: 0.0625rem solid rgba(197, 160, 89, 0.16);
+    color: #555;
+    font-style: italic;
+    text-align: center;
+}
+
 .official-album-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -706,6 +1035,201 @@ button, a {
     font-size: 0.95rem;
     max-width: 34rem;
     margin: 0 auto;
+}
+
+.message-board-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.message-board-composer {
+    min-height: 100%;
+    padding: 1.5rem;
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(235, 224, 206, 0.82));
+    border: 0.0625rem solid rgba(197, 160, 89, 0.16);
+    box-shadow: 0 0.75rem 1.75rem rgba(0, 0, 0, 0.06);
+}
+
+.message-board-kicker {
+    color: var(--color-dorado);
+    font-size: 0.78rem;
+    letter-spacing: 0.16rem;
+    margin-bottom: 0.65rem;
+    text-transform: uppercase;
+}
+
+.message-board-composer h3 {
+    font-size: 1.8rem;
+    margin-bottom: 0.75rem;
+}
+
+.message-board-composer p:last-child {
+    color: #555;
+    font-style: italic;
+}
+
+.message-board-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+}
+
+.message-card {
+    padding: 1.15rem;
+    border-radius: 20px;
+    border: 0.0625rem solid rgba(197, 160, 89, 0.15);
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.05);
+    background: var(--color-blanco);
+    display: flex;
+    flex-direction: column;
+    gap: 0.95rem;
+}
+
+.message-card-1 {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(235, 224, 206, 0.9));
+}
+
+.message-card-2 {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(197, 161, 230, 0.16));
+}
+
+.message-card-3 {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(231, 183, 191, 0.16));
+}
+
+.message-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+.message-avatar {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: linear-gradient(145deg, rgba(197, 160, 89, 0.95), rgba(197, 161, 230, 0.88));
+    color: var(--color-blanco);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    letter-spacing: 0.08rem;
+}
+
+.message-author {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.15rem;
+}
+
+.message-meta {
+    color: #777;
+    font-size: 0.82rem;
+}
+
+.message-text {
+    color: #4f4a52;
+    font-style: italic;
+    line-height: 1.65;
+}
+
+.presentation-page-card {
+    max-width: 72rem;
+}
+
+.presentation-stage {
+    position: relative;
+    overflow: hidden;
+    border-radius: 28px;
+    min-height: 34rem;
+    background: linear-gradient(180deg, rgba(57, 27, 81, 0.55), rgba(111, 74, 146, 0.82));
+    box-shadow: 0 1.2rem 2.5rem rgba(0, 0, 0, 0.18);
+}
+
+.presentation-visual {
+    position: absolute;
+    inset: 0;
+}
+
+.presentation-visual::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(34, 16, 49, 0.08), rgba(34, 16, 49, 0.58));
+}
+
+.presentation-visual img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    animation: presentationFade 0.9s ease;
+}
+
+.presentation-overlay {
+    position: relative;
+    z-index: 1;
+    min-height: 34rem;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-start;
+    gap: 0.75rem;
+    color: var(--color-blanco);
+}
+
+.presentation-kicker {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.76rem;
+    letter-spacing: 0.18rem;
+    text-transform: uppercase;
+}
+
+.presentation-overlay h3 {
+    font-size: 2.4rem;
+    margin-bottom: 0;
+}
+
+.presentation-overlay p:last-child {
+    max-width: 32rem;
+    font-size: 1rem;
+    line-height: 1.7;
+}
+
+.presentation-thumbs {
+    display: flex;
+    justify-content: center;
+    gap: 0.55rem;
+    margin: 1rem 0 1.4rem 0;
+}
+
+.presentation-thumb {
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 50%;
+    background: rgba(197, 160, 89, 0.22);
+    border: 0.0625rem solid rgba(197, 160, 89, 0.3);
+    transition: transform 0.25s ease, background 0.25s ease;
+}
+
+.presentation-thumb.is-active {
+    background: var(--color-dorado);
+    transform: scale(1.2);
+}
+
+@keyframes presentationFade {
+    from {
+        opacity: 0.15;
+        transform: scale(1.02);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 .memory-card:hover {
@@ -919,6 +1443,10 @@ button, a {
 }
 
 @media (max-width: 900px) {
+    .recuerdos-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .memories-cards {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 1.25rem;
@@ -940,11 +1468,35 @@ button, a {
         grid-column: span 2;
         grid-row: auto;
     }
+
+    .recuerdos-page-layout-guest {
+        grid-template-columns: 1fr;
+    }
+
+    .message-board-shell {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 560px) {
     .post-event-message {
         font-size: 1rem;
+    }
+
+    .recuerdos-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .recuerdos-section-card {
+        padding: 1.5rem 1.1rem;
+    }
+
+    .recuerdos-section-card h2 {
+        font-size: 2.15rem;
+    }
+
+    .recuerdos-page-header h2 {
+        font-size: 2.15rem;
     }
 
     .memories-header h2 {
@@ -989,6 +1541,23 @@ button, a {
         grid-row: auto;
     }
 
+    .presentation-stage {
+        min-height: 28rem;
+    }
+
+    .presentation-overlay {
+        min-height: 28rem;
+        padding: 1.4rem;
+    }
+
+    .presentation-overlay h3 {
+        font-size: 2rem;
+    }
+
+    .message-board-grid {
+        grid-template-columns: 1fr;
+    }
+
     .guest-album-body {
         padding: 1rem 0.9rem 1.1rem 0.9rem;
     }
@@ -1000,6 +1569,23 @@ button, a {
     .music-player {
         padding: 0.85rem 1.25rem;
         max-width: 20rem;
+    }
+
+    .upload-progress {
+        margin-bottom: 1rem;
+    }
+
+    .official-mode-badge {
+        width: 100%;
+        border-radius: 20px;
+    }
+
+    .official-album-toolbar {
+        gap: 0.5rem;
+    }
+
+    .official-tool-pill {
+        width: 100%;
     }
 }
 
@@ -1099,6 +1685,23 @@ button, a {
 .access-form .btn-rectangular {
     width: 100%;
     margin-top: 1.5rem;
+}
+
+.access-back-btn {
+    width: 100%;
+    margin-top: 0.75rem;
+    border: none;
+    background: transparent;
+    color: var(--color-texto);
+    font-size: 0.92rem;
+    text-decoration: underline;
+    text-underline-offset: 0.2rem;
+    opacity: 0.8;
+}
+
+.access-back-btn:hover {
+    opacity: 1;
+    color: var(--color-dorado);
 }
 
 .access-feedback {

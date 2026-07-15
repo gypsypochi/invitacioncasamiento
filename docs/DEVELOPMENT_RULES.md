@@ -4,7 +4,7 @@
 
 Este documento define cómo debe analizarse, diseñarse, implementarse y validarse cualquier cambio del proyecto.
 
-Su objetivo es proteger la experiencia del Centro de Recuerdos, mantener la estética original de la invitación y evitar cambios grandes, ambiguos o innecesarios.
+Su objetivo es proteger la experiencia de la invitación digital, mantener el Centro de Recuerdos integrado al recorrido y evitar cambios grandes, ambiguos o innecesarios.
 
 ---
 
@@ -15,7 +15,7 @@ El proyecto debe evolucionar con cambios pequeños e incrementales.
 Principios obligatorios:
 
 - Mantener la invitación digital como punto de entrada emocional.
-- Tratar el Centro de Recuerdos como la experiencia principal posterior al evento.
+- Tratar el Centro de Recuerdos como una sección integrada de la misma página.
 - Priorizar HTML, CSS Vanilla y JavaScript Vanilla.
 - Mantener compatibilidad con Netlify.
 - Usar Firebase solo como backend administrado.
@@ -65,18 +65,19 @@ Si una solicitud parece grande, debe dividirse antes de implementarse.
 Toda implementación relacionada con experiencia de usuario debe respetar este recorrido:
 
 1. El usuario entra al enlace de la invitación.
-2. Aparece un popup inicial con `Entrar como invitado` y `Entrar como administrador`.
+2. Aparece el popup inicial con `Entrar como invitado` y `Entrar como administrador`.
 3. Existe un `Superadministrador` oculto o restringido solo para pruebas y desarrollo.
 4. El invitado ingresa su nombre y, cuando corresponda, el código del evento.
 5. El sistema guarda su identidad en el dispositivo y crea su álbum personal.
 6. Se muestra el saludo `Hola, [Nombre] ❤️`.
-7. Al cerrarlo, se accede al Home del Centro de Recuerdos.
-8. Desde el Home se navega entre:
-   - Álbumes de Invitados
-   - Álbum Oficial
+7. Al cerrarlo, el usuario continúa recorriendo la misma página.
+8. El Centro de Recuerdos aparece como una sección integrada dentro del scroll.
+9. Desde el acceso al Centro de Recuerdos se navega entre:
+   - Fotos de los Invitados
+   - Fotos Profesionales
    - Muro de Comentarios y Saludos
    - Presentación
-9. Desde cualquier sección se puede volver atrás hasta retornar al Home.
+10. Desde cualquier sección se puede volver al recorrido anterior sin perder la invitación.
 
 Ningún cambio de experiencia debe contradecir este flujo.
 
@@ -95,7 +96,7 @@ Toda modificación debe cumplir estas reglas:
 - Mantener las interacciones simples y comprensibles.
 - Mostrar estados de carga cuando haya esperas reales.
 - Confirmar acciones destructivas.
-- Respetar la navegación de regreso al Home.
+- Respetar la navegación dentro de la misma página.
 
 ---
 
@@ -114,7 +115,7 @@ Reglas mínimas:
 - Al subir la primera foto, el álbum se vuelve visible para otros invitados.
 - En álbumes ajenos, el invitado puede ver, comentar y dar likes, pero no editar ni eliminar.
 - El álbum oficial pertenece exclusivamente a los administradores.
-- El muro de mensajes puede ser moderado por administradores.
+- El libro de mensajes puede ser moderado por administradores.
 - El superadministrador solo se usa para pruebas, cambio de usuarios y validación de permisos.
 
 ---
@@ -168,10 +169,11 @@ La versión 1 debe priorizar:
 - Entrada por invitado y administrador.
 - Superadministración interna restringida para pruebas.
 - Álbum personal automático.
-- Home con cuatro secciones centrales.
-- Álbumes de invitados con permisos correctos.
-- Álbum oficial administrado por novios.
-- Muro de mensajes.
+- Centro de Recuerdos separado en `centro-recuerdos.html` y accesible desde la invitación.
+- Cuatro secciones principales dentro del Centro de Recuerdos.
+- Fotos de los Invitados con `Mi Álbum` y álbumes públicos.
+- Fotos Profesionales con modo invitado y modo administrador.
+- Muro de Comentarios y Saludos.
 - Presentación con música existente.
 
 Todo cambio debe evaluarse según su aporte a ese recorrido principal.

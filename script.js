@@ -133,6 +133,43 @@ const eventConfig = {
             file: "assets/audio/unchained-melody.mp3"
         }
     ],
+    messageBoardSeed: [
+        {
+            initials: "MC",
+            author: "Mica",
+            message: "Gracias por acompañarnos en este momento tan especial y por dejar un recuerdo para siempre.",
+            meta: "Hace unos minutos"
+        },
+        {
+            initials: "JR",
+            author: "Juli",
+            message: "Les deseo una vida llena de amor, música y momentos inolvidables.",
+            meta: "Hace 1 hora"
+        },
+        {
+            initials: "FA",
+            author: "Familia",
+            message: "Qué lindo poder dejar saludos en un muro que guarda todo con tanta elegancia.",
+            meta: "Hoy"
+        }
+    ],
+    presentationSlides: [
+        {
+            image: "assets/img-1.png",
+            title: "Primer recuerdo",
+            text: "Imágenes elegidas para iniciar la presentación automática."
+        },
+        {
+            image: "assets/img-2.png",
+            title: "Momento especial",
+            text: "La galería irá alternando fotos con transición suave."
+        },
+        {
+            image: "assets/img-3.png",
+            title: "Recuerdo compartido",
+            text: "Las fotos disponibles se irán mezclando en secuencia."
+        }
+    ],
     albumTemplates: {
         guestAlbumType: "guest",
         officialAlbumType: "official"
@@ -193,16 +230,32 @@ applyEventConfig();
 
 // --- 3. FLUJO LOCAL DE INGRESO AL CENTRO DE RECUERDOS ---
 const accessStorageKey = "centroRecuerdosAccess";
-const albumStorageKey = "centroRecuerdosAlbums";
+const recuerdosSections = [
+    { id: "albumes-invitados", title: "Fotos de los Invitados" },
+    { id: "album-oficial", title: "Fotos Profesionales" },
+    { id: "libro-mensajes", title: "Muro de Comentarios y Saludos" },
+    { id: "presentacion", title: "Presentación" }
+];
 
 function getStoredAccessProfile() {
     const storedProfile = localStorage.getItem(accessStorageKey);
-    return storedProfile ? JSON.parse(storedProfile) : null;
+
+    if (!storedProfile) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(storedProfile);
+    } catch (error) {
+        return null;
+    }
 }
 
 function saveAccessProfile(profile) {
     localStorage.setItem(accessStorageKey, JSON.stringify(profile));
 }
+
+const albumStorageKey = "centroRecuerdosAlbums";
 
 function getStoredAlbums() {
     const storedAlbums = localStorage.getItem(albumStorageKey);
@@ -215,7 +268,7 @@ function saveAlbums(albums) {
 
 function getGuestAlbumPreviewItems() {
     const storedAlbums = getStoredAlbums().filter((album) => album.type === eventConfig.albumTemplates.guestAlbumType);
-    const albumsWithContent = storedAlbums.filter((album) => (album.photos && album.photos.length > 0) || album.video);
+    const albumsWithContent = storedAlbums.filter((album) => album.visible && ((album.photos && album.photos.length > 0) || album.video));
 
     if (albumsWithContent.length > 0) {
         return albumsWithContent.map((album, index) => ({
@@ -233,13 +286,67 @@ function getGuestAlbumPreviewItems() {
         }));
     }
 
-    return eventConfig.guestAlbumPreviewSeed;
+    return eventConfig.guestAlbumPreviewSeed.map((album, index) => ({
+        ...album,
+        accentClass: album.accentClass || ["accent-rose", "accent-lavender", "accent-sand", "accent-plum"][index % 4]
+    }));
+}
+
+function getActiveGuestAlbum() {
+    const profile = getStoredAccessProfile();
+    const storedAlbums = getStoredAlbums().filter((album) => album.type === eventConfig.albumTemplates.guestAlbumType);
+
+    if (!profile || profile.type !== "guest" || !profile.name) {
+        return null;
+    }
+
+    return storedAlbums.find((album) => album.ownerName === profile.name) || null;
+}
+
+function getPersonalAlbumPreviewItems() {
+    const profile = getStoredAccessProfile();
+    const guestName = profile && profile.type === "guest" && profile.name ? profile.name : "Mi álbum";
+    const activeAlbum = getActiveGuestAlbum();
+
+    if (!activeAlbum) {
+        return {
+            guestName,
+            items: [],
+            hasContent: false
+        };
+    }
+
+    const photoItems = (activeAlbum.photos || []).map((photo, index) => ({
+        id: activeAlbum.id + "-photo-" + index,
+        kind: "photo",
+        title: photo.title || ("Foto " + (index + 1)),
+        meta: "Guardada en tu álbum",
+        iconClass: "fa-solid fa-image"
+    }));
+
+    const videoItems = activeAlbum.video ? [{
+        id: activeAlbum.id + "-video",
+        kind: "video",
+        title: activeAlbum.video.title || "Video único",
+        meta: "Guardado en tu álbum",
+        iconClass: "fa-solid fa-video"
+    }] : [];
+
+    return {
+        guestName,
+        items: [...photoItems, ...videoItems],
+        hasContent: photoItems.length > 0 || videoItems.length > 0
+    };
 }
 
 function renderGuestAlbumsGrid() {
     const gridElement = document.getElementById("guest-albums-grid");
     const summaryElement = document.getElementById("guest-albums-summary");
     const guestAlbums = getGuestAlbumPreviewItems();
+
+    if (!gridElement || !summaryElement) {
+        return;
+    }
 
     gridElement.innerHTML = guestAlbums.map((album) => `
         <article class="guest-album-card ${album.accentClass}">
@@ -254,60 +361,30 @@ function renderGuestAlbumsGrid() {
         </article>
     `).join("");
 
-    summaryElement.textContent = `${guestAlbums.length} portadas visibles en la grilla de invitados.`;
-}
-
-function getPersonalAlbumPreviewItems() {
-    const profile = getStoredAccessProfile();
-    const guestName = profile && profile.type === "guest" && profile.name ? profile.name : "Tu álbum";
-
-    const storedAlbums = getStoredAlbums().filter((album) => album.type === eventConfig.albumTemplates.guestAlbumType);
-    const activeAlbum = profile && profile.name
-        ? storedAlbums.find((album) => album.ownerName === profile.name)
-        : null;
-
-    if (activeAlbum && ((activeAlbum.photos && activeAlbum.photos.length > 0) || activeAlbum.video)) {
-        const photoItems = (activeAlbum.photos || []).map((photo, index) => ({
-            id: activeAlbum.id + "-photo-" + index,
-            kind: "photo",
-            title: photo.title || ("Foto " + (index + 1)),
-            meta: "Guardada en tu álbum",
-            iconClass: "fa-solid fa-image"
-        }));
-
-        const videoItems = activeAlbum.video ? [{
-            id: activeAlbum.id + "-video",
-            kind: "video",
-            title: activeAlbum.video.title || "Video único",
-            meta: "Guardado en tu álbum",
-            iconClass: "fa-solid fa-video"
-        }] : [];
-
-        return {
-            guestName,
-            items: [...photoItems, ...videoItems]
-        };
-    }
-
-    return {
-        guestName,
-        items: eventConfig.personalAlbumPreviewSeed
-    };
+    summaryElement.textContent = `${guestAlbums.length} álbumes visibles para recorrer en esta sección.`;
 }
 
 function renderPersonalAlbumPreview() {
     const titleElement = document.getElementById("personal-album-title");
     const descriptionElement = document.getElementById("personal-album-description");
     const listElement = document.getElementById("personal-album-media-list");
+    const emptyStateElement = document.getElementById("personal-album-empty-state");
+    const progressElement = document.getElementById("personal-upload-progress");
+    const progressBarElement = document.getElementById("personal-upload-progress-bar");
+    const progressTextElement = document.getElementById("personal-upload-progress-text");
     const personalAlbum = getPersonalAlbumPreviewItems();
 
-    titleElement.textContent = personalAlbum.guestName === "Tu álbum"
-        ? "Tu álbum personal"
-        : "Tu álbum, " + personalAlbum.guestName;
+    if (!titleElement || !descriptionElement || !listElement || !emptyStateElement || !progressElement || !progressBarElement || !progressTextElement) {
+        return;
+    }
 
-    descriptionElement.textContent = personalAlbum.guestName === "Tu álbum"
-        ? "Subí tus fotos y tu único video para mantenerlos ordenados en tu álbum propio."
-        : "Así se ve el álbum personal de " + personalAlbum.guestName + " con su contenido local.";
+    titleElement.textContent = personalAlbum.guestName === "Mi álbum"
+        ? "Mi álbum"
+        : "Mi álbum, " + personalAlbum.guestName;
+
+    descriptionElement.textContent = personalAlbum.hasContent
+        ? "Así se verán tus fotos y tu único video organizados en tu álbum propio."
+        : "Subí tus fotos y tu único video para mantenerlos ordenados en tu álbum propio.";
 
     listElement.innerHTML = personalAlbum.items.map((item, index) => `
         <article class="personal-media-card ${item.kind === "video" ? "is-video" : "is-photo"}">
@@ -321,10 +398,51 @@ function renderPersonalAlbumPreview() {
             </div>
         </article>
     `).join("");
+
+    emptyStateElement.hidden = personalAlbum.hasContent;
+    listElement.hidden = !personalAlbum.hasContent;
+    progressElement.hidden = true;
+    progressBarElement.style.width = "0%";
+    progressTextElement.textContent = "0%";
 }
 
 function renderOfficialAlbumPreview() {
     const listElement = document.getElementById("official-album-grid");
+    const modeElement = document.getElementById("official-view-mode");
+    const descriptionElement = document.getElementById("official-album-description");
+    const titleElement = document.getElementById("official-album-title");
+    const actionsElement = document.getElementById("official-album-actions");
+    const profile = getStoredAccessProfile();
+    const isAdmin = profile && profile.type === "admin";
+
+    if (!listElement || !modeElement || !descriptionElement || !titleElement || !actionsElement) {
+        return;
+    }
+
+    titleElement.textContent = isAdmin ? "Galería oficial en modo administrador" : "Galería oficial en modo invitado";
+    descriptionElement.textContent = isAdmin
+        ? "Como administrador, esta vista deja preparada la curaduría del álbum oficial."
+        : "Como invitado, solo podés contemplar la selección oficial de los novios.";
+
+    modeElement.innerHTML = `
+        <div class="official-mode-badge ${isAdmin ? "is-admin" : "is-guest"}">
+            <span class="official-mode-label">${isAdmin ? "Modo administrador" : "Modo invitado"}</span>
+            <span class="official-mode-text">${isAdmin ? "Herramientas listas para curar fotos oficiales." : "Vista de solo lectura para invitados."}</span>
+        </div>
+    `;
+
+    actionsElement.innerHTML = isAdmin ? `
+        <div class="official-album-toolbar" aria-label="Herramientas del álbum oficial">
+            <span class="official-tool-pill">Subir</span>
+            <span class="official-tool-pill">Editar</span>
+            <span class="official-tool-pill">Eliminar</span>
+            <span class="official-tool-pill">Organizar</span>
+        </div>
+    ` : `
+        <div class="official-readonly-note">
+            <p>El álbum oficial pertenece a los novios. Los invitados solo pueden visualizarlo.</p>
+        </div>
+    `;
 
     listElement.innerHTML = eventConfig.officialAlbumPreviewSeed.map((item, index) => `
         <article class="official-album-card ${index === 0 ? "is-featured" : ""}">
@@ -340,22 +458,90 @@ function renderOfficialAlbumPreview() {
     `).join("");
 }
 
+function renderMessageBoard() {
+    const boardElement = document.getElementById("message-board-grid");
+
+    if (!boardElement) {
+        return;
+    }
+
+    boardElement.innerHTML = eventConfig.messageBoardSeed.map((message, index) => `
+        <article class="message-card message-card-${(index % 3) + 1}">
+            <div class="message-card-header">
+                <span class="message-avatar">${message.initials}</span>
+                <div>
+                    <p class="message-author">${message.author}</p>
+                    <p class="message-meta">${message.meta}</p>
+                </div>
+            </div>
+            <p class="message-text">${message.message}</p>
+        </article>
+    `).join("");
+}
+
+function renderPresentation() {
+    const slideImage = document.getElementById("presentation-slide-image");
+    const slideKicker = document.getElementById("presentation-slide-kicker");
+    const slideTitle = document.getElementById("presentation-slide-title");
+    const slideText = document.getElementById("presentation-slide-text");
+    const thumbsElement = document.getElementById("presentation-thumbs");
+
+    if (!slideImage || !slideKicker || !slideTitle || !slideText || !thumbsElement) {
+        return;
+    }
+
+    thumbsElement.innerHTML = eventConfig.presentationSlides.map((slide, index) => `
+        <span class="presentation-thumb ${index === 0 ? "is-active" : ""}"></span>
+    `).join("");
+
+    const applySlide = (index) => {
+        const slide = eventConfig.presentationSlides[index];
+
+        slideImage.src = slide.image;
+        slideImage.alt = slide.title;
+        slideKicker.textContent = "Centro de Recuerdos";
+        slideTitle.textContent = slide.title;
+        slideText.textContent = slide.text;
+
+        thumbsElement.querySelectorAll(".presentation-thumb").forEach((thumb, thumbIndex) => {
+            thumb.classList.toggle("is-active", thumbIndex === index);
+        });
+    };
+
+    applySlide(0);
+
+    if (window.presentationRotationTimer) {
+        window.clearInterval(window.presentationRotationTimer);
+    }
+
+    let currentSlideIndex = 0;
+    window.presentationRotationTimer = window.setInterval(() => {
+        currentSlideIndex = (currentSlideIndex + 1) % eventConfig.presentationSlides.length;
+        applySlide(currentSlideIndex);
+    }, 4500);
+}
+
 function updateAlbumEmptyStates() {
     const guestEmptyState = document.getElementById("guest-albums-empty-state");
-    const personalEmptyState = document.getElementById("personal-album-empty-state");
     const officialEmptyState = document.getElementById("official-album-empty-state");
 
-    const guestHasContent = getGuestAlbumPreviewItems().length > 0;
-    const personalHasContent = getPersonalAlbumPreviewItems().items.length > 0;
+    if (!guestEmptyState || !officialEmptyState) {
+        return;
+    }
+
+    const guestHasContent = getGuestAlbumPreviewItems().some((album) => album.photoCount > 0);
     const officialHasContent = eventConfig.officialAlbumPreviewSeed.length > 0;
 
     guestEmptyState.hidden = guestHasContent;
-    personalEmptyState.hidden = personalHasContent;
     officialEmptyState.hidden = officialHasContent;
 }
 
 function showToast(message, variant = "default") {
     const toastContainer = document.getElementById("toast-container");
+    if (!toastContainer) {
+        return;
+    }
+
     const toast = document.createElement("div");
     const toastIconClass = variant === "success"
         ? "fa-solid fa-circle-check"
@@ -409,6 +595,135 @@ function createPersonalAlbum(guestName) {
     return newAlbum;
 }
 
+function updateGuestGreeting() {
+    const profile = getStoredAccessProfile();
+    const greetingElement = document.getElementById("guest-greeting");
+    if (!greetingElement) {
+        return;
+    }
+
+    if (profile && profile.type === "guest" && profile.name) {
+        greetingElement.textContent = `Hola, ${profile.name} ❤️`;
+        greetingElement.hidden = false;
+    } else {
+        greetingElement.hidden = true;
+    }
+}
+
+function renderMemoriesPreview() {
+    updateCenterHeader();
+    updateGuestGreeting();
+    renderGuestAlbumsGrid();
+    renderPersonalAlbumPreview();
+    renderOfficialAlbumPreview();
+    renderMessageBoard();
+    renderPresentation();
+    updateAlbumEmptyStates();
+}
+
+function initializeToastInteractions() {
+    const photosButton = document.getElementById("personal-upload-photos-btn");
+    const videoButton = document.getElementById("personal-upload-video-btn");
+
+    if (photosButton) {
+        photosButton.addEventListener("click", () => {
+            simulatePersonalUpload("Fotos");
+        });
+    }
+
+    if (videoButton) {
+        videoButton.addEventListener("click", () => {
+            simulatePersonalUpload("Video");
+        });
+    }
+}
+
+function simulatePersonalUpload(label) {
+    const progressElement = document.getElementById("personal-upload-progress");
+    const progressBarElement = document.getElementById("personal-upload-progress-bar");
+    const progressTextElement = document.getElementById("personal-upload-progress-text");
+
+    if (!progressElement || !progressBarElement || !progressTextElement) {
+        return;
+    }
+
+    progressElement.hidden = false;
+    progressBarElement.style.width = "0%";
+    progressTextElement.textContent = "0%";
+
+    let progress = 0;
+    const uploadTimer = window.setInterval(() => {
+        progress += 12;
+        if (progress >= 100) {
+            progress = 100;
+        }
+
+        progressBarElement.style.width = progress + "%";
+        progressTextElement.textContent = progress + "%";
+
+        if (progress >= 100) {
+            window.clearInterval(uploadTimer);
+            window.setTimeout(() => {
+                appendMockPersonalMedia(label);
+                progressElement.hidden = true;
+                showToast(label === "Video"
+                    ? "Video listo: el flujo de carga quedó preparado."
+                    : "Fotos listas: la carga simulada quedó completa.", "success");
+            }, 300);
+        }
+    }, 120);
+}
+
+function appendMockPersonalMedia(label) {
+    const profile = getStoredAccessProfile();
+
+    if (!profile || profile.type !== "guest" || !profile.name) {
+        return;
+    }
+
+    let albums = getStoredAlbums();
+    let album = albums.find((item) => item.ownerName === profile.name && item.type === eventConfig.albumTemplates.guestAlbumType);
+
+    if (!album) {
+        album = createPersonalAlbum(profile.name);
+        albums = getStoredAlbums();
+    }
+
+    if (label === "Video") {
+        if (album.video) {
+            showToast("Solo se permite un video por invitado.", "error");
+            return;
+        }
+
+        album.video = {
+            title: "Video único",
+            meta: "Guardado localmente como vista previa"
+        };
+    } else {
+        const photoIndex = (album.photos ? album.photos.length : 0) + 1;
+        album.photos = album.photos || [];
+        album.photos.push({
+            title: "Foto " + photoIndex,
+            meta: "Guardada localmente como vista previa"
+        });
+        album.visible = true;
+    }
+
+    const updatedAlbums = albums.map((item) => item.id === album.id ? album : item);
+    saveAlbums(updatedAlbums);
+    renderGuestAlbumsGrid();
+    renderPersonalAlbumPreview();
+}
+
+function clearAccessProfile() {
+    localStorage.removeItem(accessStorageKey);
+}
+
+function openAccessModal() {
+    document.getElementById("access-modal").hidden = false;
+    document.body.classList.add("modal-open");
+}
+
 function closeAccessModal() {
     document.getElementById("access-modal").hidden = true;
     document.body.classList.remove("modal-open");
@@ -418,45 +733,194 @@ function showAccessFeedback(message) {
     document.getElementById("access-feedback").textContent = message;
 }
 
-function setAccessMode(mode) {
-    const isGuestMode = mode === "guest";
+function getCurrentAccessView() {
+    const successState = document.getElementById("access-modal-success");
 
-    document.getElementById("guest-access-option").classList.toggle("active", isGuestMode);
-    document.getElementById("admin-access-option").classList.toggle("active", !isGuestMode);
-    document.getElementById("guest-access-form").hidden = !isGuestMode;
-    document.getElementById("admin-access-form").hidden = isGuestMode;
-    showAccessFeedback("");
+    if (successState && !successState.hidden) {
+        return "success";
+    }
+
+    return document.getElementById("access-modal-welcome").hidden ? "returning" : "welcome";
 }
 
-function updateGuestGreeting() {
-    const profile = getStoredAccessProfile();
-    const greetingElement = document.getElementById("guest-greeting");
-    if (profile && profile.type === "guest" && profile.name) {
-        greetingElement.innerHTML = `Hola, ${profile.name} <i class="fa-solid fa-heart" style="color: var(--color-dorado); font-size: 0.8em; margin-left: 0.3rem;"></i>`;
-        greetingElement.hidden = false;
-    } else {
-        greetingElement.hidden = true;
+function setAccessView(view, profile = getStoredAccessProfile()) {
+    const welcomeState = document.getElementById("access-modal-welcome");
+    const returningState = document.getElementById("access-modal-returning");
+    const successState = document.getElementById("access-modal-success");
+    const guestForm = document.getElementById("guest-access-form");
+    const adminForm = document.getElementById("admin-access-form");
+    const guestOption = document.getElementById("guest-access-option");
+    const adminOption = document.getElementById("admin-access-option");
+    const returningName = document.getElementById("access-modal-returning-name");
+    const successName = document.getElementById("access-modal-success-name");
+    const continueBtn = document.getElementById("continue-session-btn");
+    const switchUserBtn = document.getElementById("switch-user-btn");
+    const openAdminFormBtn = document.getElementById("open-admin-form-btn");
+
+    welcomeState.hidden = view !== "welcome";
+    returningState.hidden = view !== "returning";
+    successState.hidden = view !== "success";
+    guestForm.hidden = view !== "guest-form";
+    adminForm.hidden = view !== "admin-form";
+    showAccessFeedback("");
+
+    guestOption.classList.toggle("active", view === "guest-form");
+    adminOption.classList.toggle("active", view === "admin-form");
+
+    if (view === "returning") {
+        const isGuest = profile && profile.type === "guest";
+        const displayName = isGuest && profile.name ? profile.name : "administrador";
+
+        returningName.textContent = isGuest
+            ? "Tu sesión guardada es para " + profile.name + "."
+            : "Tu sesión de administrador sigue disponible en este dispositivo.";
+
+        continueBtn.textContent = isGuest ? "Continuar como " + profile.name : "Continuar como administrador";
+        switchUserBtn.textContent = isGuest ? "Cambiar de usuario" : "Cerrar sesión";
+        openAdminFormBtn.hidden = false;
+        openAdminFormBtn.textContent = "Ingresar como administrador";
+        continueBtn.dataset.sessionType = isGuest ? "guest" : "admin";
+        switchUserBtn.dataset.sessionType = isGuest ? "guest" : "admin";
+        openAdminFormBtn.dataset.sessionType = "admin";
+        returningState.dataset.sessionType = displayName;
+        return;
+    }
+
+    if (view === "success") {
+        const displayName = profile && profile.name ? profile.name : "administrador";
+
+        successName.textContent = profile && profile.type === "guest"
+            ? "Hola, " + profile.name
+            : "Bienvenido";
+        successState.dataset.sessionType = displayName;
+        openAdminFormBtn.hidden = true;
+        return;
+    }
+
+    if (view !== "returning") {
+        openAdminFormBtn.hidden = true;
+    }
+
+    if (view === "welcome") {
+        guestOption.classList.add("active");
+        adminOption.classList.remove("active");
+    }
+
+    if (view === "guest-form") {
+        document.getElementById("guest-name").focus();
+    }
+
+    if (view === "admin-form") {
+        document.getElementById("admin-code").focus();
     }
 }
 
-function renderMemoriesPreview() {
-    renderGuestAlbumsGrid();
-    renderPersonalAlbumPreview();
-    renderOfficialAlbumPreview();
-    updateAlbumEmptyStates();
+function showAccessWelcome(profile = getStoredAccessProfile()) {
+    if (profile) {
+        setAccessView("returning", profile);
+        return;
+    }
+
+    setAccessView("welcome", null);
 }
 
-function initializeToastInteractions() {
-    const photosButton = document.getElementById("personal-upload-photos-btn");
-    const videoButton = document.getElementById("personal-upload-video-btn");
+function showAccessSuccess(profile = getStoredAccessProfile()) {
+    setAccessView("success", profile);
+}
 
-    photosButton.addEventListener("click", () => {
-        showToast("Vista previa lista: tus fotos quedarán ordenadas en tu álbum personal.", "success");
+function updateCenterHeader(profile = getStoredAccessProfile()) {
+    const greetingElement = document.getElementById("guest-greeting");
+    const sessionSwitchBtn = document.getElementById("session-switch-btn");
+
+    if (profile && profile.type === "guest" && profile.name) {
+        greetingElement.textContent = "Hola, " + profile.name + " ❤️";
+        greetingElement.hidden = false;
+        sessionSwitchBtn.hidden = false;
+        sessionSwitchBtn.textContent = "Cambiar de usuario";
+        return;
+    }
+
+    if (profile && profile.type === "admin") {
+        greetingElement.textContent = "Centro de Recuerdos ❤️";
+        greetingElement.hidden = false;
+        sessionSwitchBtn.hidden = false;
+        sessionSwitchBtn.textContent = "Cerrar sesión";
+        return;
+    }
+
+    greetingElement.hidden = true;
+    sessionSwitchBtn.hidden = true;
+}
+
+function scrollToRecuerdosSection(sectionId) {
+    const targetSection = document.getElementById(sectionId);
+
+    if (!targetSection) {
+        return;
+    }
+
+    recuerdosSections.forEach((section) => {
+        const sectionElement = document.getElementById(section.id);
+        if (sectionElement && sectionElement.id !== sectionId) {
+            sectionElement.hidden = true;
+        }
     });
 
-    videoButton.addEventListener("click", () => {
-        showToast("Solo se permite un video por invitado. Esta pantalla lo respeta.", "error");
+    targetSection.hidden = false;
+    targetSection.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function bindRecuerdosNavigation() {
+    const recuerdosGrid = document.getElementById("recuerdos-grid");
+    if (recuerdosGrid) {
+        recuerdosGrid.addEventListener("click", (event) => {
+            const button = event.target.closest("[data-target]");
+
+            if (!button) {
+                return;
+            }
+
+            scrollToRecuerdosSection(button.dataset.target);
+        });
+    }
+
+    document.querySelectorAll("[data-back-to]").forEach((button) => {
+        button.addEventListener("click", () => {
+            scrollToRecuerdosSection(button.dataset.backTo);
+        });
     });
+
+    const sessionSwitchBtn = document.getElementById("session-switch-btn");
+    if (sessionSwitchBtn) {
+        sessionSwitchBtn.addEventListener("click", () => {
+            clearAccessProfile();
+            updateCenterHeader(null);
+            showAccessWelcome(null);
+            openAccessModal();
+        });
+    }
+
+    const switchUserBtn = document.getElementById("switch-user-btn");
+    if (switchUserBtn) {
+        switchUserBtn.addEventListener("click", () => {
+            clearAccessProfile();
+            updateCenterHeader(null);
+            showAccessWelcome(null);
+            openAccessModal();
+        });
+    }
+
+    const openAdminFormBtn = document.getElementById("open-admin-form-btn");
+    if (openAdminFormBtn) {
+        openAdminFormBtn.addEventListener("click", () => {
+            setAccessView("admin-form");
+        });
+    }
+
+    const closeAccessSuccessBtn = document.getElementById("close-access-success-btn");
+    if (closeAccessSuccessBtn) {
+        closeAccessSuccessBtn.addEventListener("click", closeAccessModal);
+    }
 }
 
 function handleGuestAccess(event) {
@@ -477,9 +941,7 @@ function handleGuestAccess(event) {
     };
 
     saveAccessProfile(profile);
-    createPersonalAlbum(guestName);
-    updateGuestGreeting();
-    closeAccessModal();
+    showAccessSuccess(profile);
 }
 
 function handleAdminAccess(event) {
@@ -492,27 +954,34 @@ function handleAdminAccess(event) {
         return;
     }
 
-    saveAccessProfile({
+    const profile = {
         type: "admin",
         enteredAt: new Date().toISOString()
-    });
-    updateGuestGreeting();
+    };
+
+    saveAccessProfile(profile);
     closeAccessModal();
 }
 
 function initializeAccessFlow() {
-    updateGuestGreeting();
+    const storedProfile = getStoredAccessProfile();
 
-    if (getStoredAccessProfile()) {
-        closeAccessModal();
-        return;
-    }
-
-    document.body.classList.add("modal-open");
-    document.getElementById("guest-access-option").addEventListener("click", () => setAccessMode("guest"));
-    document.getElementById("admin-access-option").addEventListener("click", () => setAccessMode("admin"));
+    document.getElementById("guest-access-option").addEventListener("click", () => setAccessView("guest-form"));
+    document.getElementById("admin-access-option").addEventListener("click", () => setAccessView("admin-form"));
     document.getElementById("guest-access-form").addEventListener("submit", handleGuestAccess);
     document.getElementById("admin-access-form").addEventListener("submit", handleAdminAccess);
+    document.getElementById("guest-back-btn").addEventListener("click", () => showAccessWelcome(getStoredAccessProfile()));
+    document.getElementById("admin-back-btn").addEventListener("click", () => showAccessWelcome(getStoredAccessProfile()));
+    const continueSessionBtn = document.getElementById("continue-session-btn");
+    if (continueSessionBtn) {
+        continueSessionBtn.addEventListener("click", () => {
+            closeAccessModal();
+        });
+    }
+
+    showAccessWelcome(storedProfile);
+    updateCenterHeader(storedProfile);
+    openAccessModal();
 }
 
 initializeAccessFlow();
@@ -530,7 +999,6 @@ function showPostEventContent() {
     const previewSection = document.getElementById("centro-recuerdos-preview");
     previewSection.hidden = false;
     previewSection.classList.add("fade-in");
-    renderMemoriesPreview();
 }
 
 function updateCountdown() {
@@ -650,5 +1118,3 @@ document.body.addEventListener("click", () => {
 // Inicializar primer track
 loadTrack(currentTrackIndex);
 audio.volume = volumeSlider.value;
-renderMemoriesPreview();
-initializeToastInteractions();

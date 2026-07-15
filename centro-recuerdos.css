@@ -1,0 +1,118 @@
+body.centro-recuerdos-page {
+    background:
+        radial-gradient(circle at top, rgba(197, 161, 230, 0.24), transparent 42%),
+        linear-gradient(180deg, rgba(255, 250, 244, 0.96), rgba(246, 236, 224, 0.98));
+}
+
+.recuerdos-landing {
+    padding-top: 4rem;
+    padding-bottom: 3rem;
+}
+
+.recuerdos-landing-shell {
+    max-width: 72rem;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.recuerdos-landing-kicker {
+    color: var(--color-dorado);
+    font-size: 0.82rem;
+    letter-spacing: 0.22rem;
+    margin-bottom: 0.85rem;
+    text-transform: uppercase;
+}
+
+.recuerdos-landing-title {
+    font-size: clamp(2.6rem, 4vw, 4.3rem);
+    margin-bottom: 0.9rem;
+}
+
+.recuerdos-landing-text {
+    max-width: 44rem;
+    margin: 0 auto;
+    color: #554d58;
+    font-size: 1.08rem;
+    font-style: italic;
+    line-height: 1.7;
+}
+
+.recuerdos-landing-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin: 1.75rem 0 2rem 0;
+}
+
+.recuerdos-landing-actions .btn-rectangular {
+    min-width: 15rem;
+}
+
+.recuerdos-illustration {
+    margin-top: 0.5rem;
+    display: flex;
+    justify-content: center;
+}
+
+.recuerdos-illustration-frame {
+    width: min(100%, 42rem);
+    min-height: 12rem;
+    border-radius: 30px;
+    border: 0.0625rem solid rgba(197, 160, 89, 0.2);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(197, 161, 230, 0.14));
+    box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.recuerdos-illustration-icon {
+    color: var(--color-dorado);
+    font-size: 2rem;
+}
+
+.recuerdos-illustration-frame p {
+    color: #5f5764;
+    font-style: italic;
+    margin: 0;
+}
+
+.recuerdos-home-section {
+    padding-top: 1rem;
+}
+
+.recuerdos-card-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.recuerdos-card-link:focus-visible {
+    outline: 0.2rem solid rgba(197, 160, 89, 0.4);
+    outline-offset: 0.2rem;
+}
+
+.recuerdos-page-card,
+.presentation-page-card {
+    margin-top: 0.5rem;
+}
+
+@media (max-width: 560px) {
+    .recuerdos-landing {
+        padding-top: 3rem;
+        padding-bottom: 2.25rem;
+    }
+
+    .recuerdos-landing-actions .btn-rectangular {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .recuerdos-illustration-frame {
+        min-height: 10rem;
+    }
+}

@@ -14,13 +14,9 @@ La experiencia principal debe seguir este flujo:
 4. El invitado ingresa su nombre y, cuando corresponda, el código del evento.
 5. El sistema guarda su identidad en el dispositivo y crea automáticamente su álbum personal.
 6. Se muestra el saludo `Hola, [Nombre] ❤️`.
-7. Al cerrarlo, se accede al Home del Centro de Recuerdos.
-8. El Home muestra cuatro tarjetas:
-   - Álbumes de Invitados
-   - Álbum Oficial
-   - Muro de Comentarios y Saludos
-   - Presentación
-9. Desde cualquier sección se puede volver atrás hasta regresar al Home.
+7. Al cerrarlo, el usuario continúa recorriendo la misma página.
+8. El Centro de Recuerdos funciona como una página independiente accesible desde la invitación.
+9. Desde cualquier sección se puede volver al recorrido principal sin perder la invitación.
 
 ## Tecnologías
 

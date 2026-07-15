@@ -4,34 +4,52 @@
 
 El proyecto nace como una invitación digital de casamiento para Marcela y Jorge y evoluciona hacia un espacio emocional y colaborativo llamado **Centro de Recuerdos**.
 
-La idea central es sostener un único enlace antes, durante y después de la celebración. Primero cumple el rol de invitación elegante, clara y accesible. Luego, sin cambiar de dirección ni de identidad, se transforma en una cápsula viva donde los invitados y los novios conservan fotos, videos, mensajes y momentos del evento.
+La experiencia debe sostener un único enlace de entrada y una invitación principal con scroll continuo. La invitación conserva toda su estética original y funciona como puerta de entrada hacia una página independiente del Centro de Recuerdos, sin convertir el sitio en una aplicación genérica.
 
-El producto no debe sentirse como una red social. Debe sentirse como una memoria compartida del casamiento: íntima, ordenada, emotiva y simple de usar.
+El producto no debe sentirse como una red social. Debe sentirse como una cápsula compartida de recuerdos del casamiento: íntima, ordenada, elegante y simple de usar.
 
 ---
 
-## 2. Principio rector
+## 2. Flujo rector
 
-El flujo principal obligatorio del producto es el siguiente:
+El flujo principal obligatorio es el siguiente:
 
 1. El usuario entra al enlace de la invitación.
-2. Se muestra un popup inicial de bienvenida con dos opciones visibles: `Entrar como invitado` y `Entrar como administrador`.
-3. Para pruebas y desarrollo, existe un rol de `Superadministrador` oculto o restringido, pensado para cerrar sesión, cambiar de invitado, simular distintos usuarios y probar permisos.
+2. Se muestra el popup inicial con dos opciones visibles: `Entrar como invitado` y `Entrar como administrador`.
+3. Para pruebas y desarrollo existe un rol de `Superadministrador` oculto o restringido, pensado para cerrar sesión, cambiar de usuario, simular distintos usuarios y probar permisos.
 4. Si entra como invitado, ingresa su nombre y, cuando corresponda, el código del evento.
 5. El sistema guarda su identidad en el dispositivo y crea automáticamente su álbum personal.
-6. Luego aparece un mensaje de bienvenida: `Hola, [Nombre] ❤️`, con posibilidad de cerrarlo.
-7. Al cerrar el mensaje, se muestra el Home del Centro de Recuerdos.
-8. Desde el Home, el usuario navega entre las cuatro secciones principales.
-9. Desde cualquier sección, siempre puede volver atrás hasta regresar al Home.
+6. Luego aparece el saludo `Hola, [Nombre] ❤️`, con posibilidad de cerrarlo.
+7. Al cerrar ese mensaje, el usuario continúa recorriendo la misma página.
+8. El Centro de Recuerdos se abre como una página independiente desde las tarjetas de la invitación.
+9. Desde el Centro de Recuerdos se puede volver a la invitación principal sin perder la sesión.
 
 Este flujo es la referencia principal para toda la experiencia del producto.
 
 ---
 
-## 3. Objetivos
+## 3. Orden de la invitación
 
-- Mantener una invitación digital elegante y emocional como punto de entrada.
-- Convertir el mismo enlace en un Centro de Recuerdos después de la celebración.
+La invitación debe mantenerse como una sola experiencia vertical con este orden funcional:
+
+1. Portada con reproductor.
+2. Contador.
+3. Centro de Recuerdos.
+4. Lugar y horario.
+5. Dress Code.
+6. Confirmación de asistencia.
+7. Mesa de regalos.
+8. Playlist de Spotify.
+9. Footer.
+
+No se deben eliminar, mover ni reemplazar las secciones existentes. El Centro de Recuerdos se agrega como una sección natural del recorrido y respeta la continuidad visual del sitio.
+
+---
+
+## 4. Objetivos
+
+- Mantener la invitación digital como punto de entrada emocional.
+- Integrar el Centro de Recuerdos dentro del mismo recorrido.
 - Permitir participación simple, sin cuentas tradicionales, email ni contraseña.
 - Ofrecer una experiencia clara para invitados, administradores y pruebas internas.
 - Preservar la velocidad, la estabilidad y la compatibilidad con Netlify.
@@ -41,7 +59,7 @@ Este flujo es la referencia principal para toda la experiencia del producto.
 
 ---
 
-## 4. Público objetivo
+## 5. Público objetivo
 
 ### Invitados
 
@@ -55,7 +73,7 @@ Su experiencia debe permitir:
 - Ver álbumes de otros invitados.
 - Subir contenido propio.
 - Comentar y dar likes según permisos.
-- Participar del muro de mensajes y de la presentación.
+- Participar del Muro de Comentarios y Saludos y de la Presentación.
 
 ### Administradores
 
@@ -85,34 +103,36 @@ Este rol no forma parte del recorrido normal del usuario final.
 
 ---
 
-## 5. Home del Centro de Recuerdos
+## 6. Centro de Recuerdos
 
-Luego del mensaje de bienvenida, el Home concentra la navegación principal del producto.
+El Centro de Recuerdos se abre como una página propia, pero conserva la identidad visual, emocional y colaborativa del proyecto.
 
 Debe mostrar cuatro tarjetas principales:
 
-- `Álbumes de Invitados`
-- `Álbum Oficial`
+- `Fotos de los Invitados`
+- `Fotos Profesionales`
 - `Muro de Comentarios y Saludos`
 - `Presentación`
 
-El Home actúa como centro de navegación y no como una página secundaria aislada. Desde allí el usuario entra a cada sección y puede volver siempre al punto de partida.
+La página debe respetar la estética actual, la alternancia de colores, las tipografías, los espaciados, las animaciones y el comportamiento responsive del resto del proyecto.
+
+No debe sentirse como una aplicación ajena a la invitación; debe sentirse como su continuación natural.
 
 ---
 
-## 6. Flujo de invitado
+## 7. Flujo del invitado
 
 El flujo del invitado debe ser directo y sin fricción.
 
 1. Entra al enlace.
 2. Ve el popup inicial.
 3. Elige `Entrar como invitado`.
-4. Ingresa su nombre y el código del evento si corresponde.
+4. Ingresa su nombre y el código del evento cuando corresponda.
 5. El sistema lo recuerda en el dispositivo.
 6. Se crea su álbum personal de forma automática.
 7. Se muestra el saludo `Hola, [Nombre] ❤️`.
-8. Al cerrar el saludo, accede al Home.
-9. Navega por las secciones del Centro de Recuerdos.
+8. Al cerrar el saludo, continúa recorriendo la misma invitación.
+9. Llega al acceso al Centro de Recuerdos desde la invitación y entra en su página independiente.
 
 Reglas del invitado:
 
@@ -127,9 +147,9 @@ Reglas del invitado:
 
 ---
 
-## 7. Álbumes de invitados
+## 8. Fotos de los Invitados
 
-Los álbumes de invitados son el corazón colaborativo del Centro de Recuerdos.
+Las Fotos de los Invitados son el corazón colaborativo del Centro de Recuerdos.
 
 Cada invitado tiene un álbum personal asociado a su identidad en el dispositivo.
 
@@ -145,7 +165,7 @@ Esta lógica debe conservar orden, privacidad mínima y pertenencia emocional so
 
 ---
 
-## 8. Álbum oficial
+## 9. Álbum oficial
 
 El Álbum Oficial pertenece exclusivamente a los novios o administradores.
 
@@ -160,9 +180,9 @@ Este espacio representa la mirada oficial del casamiento y debe mantenerse difer
 
 ---
 
-## 9. Muro de comentarios y saludos
+## 10. Muro de Comentarios y Saludos
 
-El muro funciona como un libro de mensajes tipo Padlet.
+El Muro de Comentarios y Saludos funciona como un muro tipo Padlet.
 
 Su objetivo es permitir que los invitados dejen saludos, recuerdos y mensajes breves en un espacio común y emocional.
 
@@ -175,7 +195,7 @@ Reglas principales:
 
 ---
 
-## 10. Presentación
+## 11. Presentación
 
 La Presentación es una experiencia inmersiva para revivir el evento.
 
@@ -190,7 +210,7 @@ La Presentación debe funcionar como una pieza emocional del Centro de Recuerdos
 
 ---
 
-## 11. Reglas de experiencia
+## 12. Reglas de experiencia
 
 La experiencia general del producto debe cumplir con estas reglas:
 
@@ -199,13 +219,13 @@ La experiencia general del producto debe cumplir con estas reglas:
 - Evitar pasos innecesarios.
 - Mostrar cargas y progreso de forma clara.
 - Confirmar acciones destructivas.
-- Ofrecer navegación consistente para volver al Home desde cualquier sección.
+- Ofrecer navegación consistente para volver al recorrido principal desde cualquier sección.
 - Preservar el sentimiento de cápsula de recuerdos.
 - Evitar sumar funciones que se parezcan a una red social tradicional.
 
 ---
 
-## 12. Objetivos técnicos
+## 13. Objetivos técnicos
 
 La implementación debe sostenerse sobre tecnologías simples y estables:
 
@@ -221,7 +241,7 @@ El proyecto debe seguir siendo liviano, estático en el frontend y compatible co
 
 ---
 
-## 13. Seguridad y permisos
+## 14. Seguridad y permisos
 
 El acceso y los permisos se sostienen sobre tres ideas:
 
@@ -240,18 +260,57 @@ No deben existir cuentas tradicionales ni contraseñas para invitados.
 
 ---
 
-## 14. Alcance de la versión 1
+## 15. Alcance de la versión 1
 
-La versión 1 debe consolidar el flujo principal del Centro de Recuerdos:
+La versión 1 debe consolidar la invitación digital con su Centro de Recuerdos integrado:
 
-- Entrada por el mismo enlace de la invitación.
+- Entrada por el mismo enlace.
 - Popup de bienvenida con acceso de invitado y administrador.
 - Soporte interno restringido para superadministración.
 - Creación automática del álbum personal del invitado.
-- Home con cuatro tarjetas principales.
-- Álbumes de invitados con visibilidad progresiva.
-- Álbum oficial administrado solo por novios o administradores.
-- Muro de comentarios y saludos.
-- Presentación a pantalla completa con música existente.
+- Saludo personalizado `Hola, [Nombre] ❤️`.
+- Acceso al Centro de Recuerdos desde la invitación principal.
+- Fotos de los Invitados con visibilidad progresiva.
+- Fotos Profesionales administradas solo por novios o administradores.
+- Muro de Comentarios y Saludos.
+- Presentación con música existente.
 
 La V1 no debe abrir el camino a una red social compleja. Su foco es conservar recuerdos del casamiento con una experiencia limpia, íntima y colaborativa.
+
+---
+
+## 16. Roadmap
+
+### Sprint 3
+
+Estado: finalizado.
+
+Alcance completado:
+
+- Flujo de acceso con popup inicial.
+- Persistencia de identidad del invitado en el dispositivo.
+- Mensaje `Hola, [Nombre] ❤️` con posibilidad de cerrarlo.
+- Centro de Recuerdos separado en `centro-recuerdos.html`.
+- Cuatro tarjetas principales del Centro de Recuerdos.
+- Navegación completa hacia `Fotos de los Invitados`, `Fotos Profesionales`, `Muro de Comentarios y Saludos` y `Presentación`.
+- Estructura navegable del frontend para cada una de esas secciones.
+- Base visual de `Mi Álbum` dentro de `Fotos de los Invitados`.
+- Base visual del `Álbum Oficial` con modo invitado y modo administrador.
+- Base visual del `Muro de Comentarios y Saludos`.
+- Base visual de la `Presentación` con transición automática.
+
+### Sprint 4
+
+Estado: pendiente.
+
+Alcance previsto:
+
+- Separación del Centro de Recuerdos en `centro-recuerdos.html`.
+- Migración de la navegación desde la invitación hacia la nueva página.
+- Flujo funcional de subida de fotos y video por invitado.
+- Lógica de visibilidad del álbum personal vacío y publicado.
+- Comentarios, likes y moderación básica.
+- Álbum oficial con permisos de administración.
+- Persistencia real en Firebase.
+- Reglas de seguridad por rol y propiedad.
+- Sincronización entre dispositivos.
