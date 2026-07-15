@@ -1,118 +1,737 @@
 body.centro-recuerdos-page {
-    background:
-        radial-gradient(circle at top, rgba(197, 161, 230, 0.24), transparent 42%),
-        linear-gradient(180deg, rgba(255, 250, 244, 0.96), rgba(246, 236, 224, 0.98));
+    background-color: var(--bg-beige);
+    color: var(--color-texto);
 }
 
-.recuerdos-landing {
-    padding-top: 4rem;
-    padding-bottom: 3rem;
+body.centro-recuerdos-page::before {
+    content: none;
 }
 
-.recuerdos-landing-shell {
-    max-width: 72rem;
-    margin: 0 auto;
+.recuerdos-app {
+    width: 100%;
+    padding: 0;
+}
+
+.recuerdos-app-root {
+    width: 100%;
+    display: grid;
+    gap: 0;
+}
+
+.recuerdos-app-hero {
     text-align: center;
 }
 
-.recuerdos-landing-kicker {
+.recuerdos-app-title {
+    font-size: clamp(2.9rem, 5vw, 5.3rem);
+    line-height: 0.92;
+    max-width: 18ch;
+    margin: 0 auto 1rem;
+}
+
+.recuerdos-app-text {
+    max-width: 36rem;
+    margin: 0 auto;
+    font-size: 1.05rem;
+    line-height: 1.8;
+    font-style: italic;
+    color: #5b5160;
+}
+
+.recuerdos-hero-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.recuerdos-hero-actions .btn-rectangular,
+.official-photos-actions .btn-rectangular,
+.personal-album-actions .btn-rectangular,
+.message-composer .btn-rectangular,
+.presentation-simple .btn-rectangular {
+    margin-top: 0;
+}
+
+.recuerdos-hero-actions .btn-secundario,
+.official-photos-actions .btn-secundario,
+.personal-album-actions .btn-secundario {
+    margin-left: 0;
+}
+
+.recuerdos-nav {
+    width: 100%;
+    padding: 0 1.25rem;
+}
+
+.recuerdos-nav-shell {
+    width: 100%;
+    max-width: 92rem;
+    margin: 0 auto;
+    padding: 0.85rem 0 1rem;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    border-bottom: 0.0625rem solid rgba(197, 160, 89, 0.16);
+}
+
+.recuerdos-nav-link {
+    color: #4d4254;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.03rem;
+    text-decoration: none;
+    border-bottom: 0.12rem solid transparent;
+    padding: 0.2rem 0;
+}
+
+.recuerdos-nav-link:hover,
+.recuerdos-nav-link:focus-visible {
+    color: #2f2733;
+    border-bottom-color: rgba(197, 160, 89, 0.4);
+}
+
+.recuerdos-section {
+    width: 100%;
+    padding: 5rem 1.25rem;
+    scroll-margin-top: 0;
+}
+
+.recuerdos-section-copy {
+    max-width: 46rem;
+    margin: 0 auto 2rem;
+    text-align: center;
+}
+
+.recuerdos-section-kicker {
     color: var(--color-dorado);
-    font-size: 0.82rem;
+    font-size: 0.78rem;
     letter-spacing: 0.22rem;
-    margin-bottom: 0.85rem;
+    margin-bottom: 0.65rem;
     text-transform: uppercase;
 }
 
-.recuerdos-landing-title {
-    font-size: clamp(2.6rem, 4vw, 4.3rem);
-    margin-bottom: 0.9rem;
+.recuerdos-section-copy h2 {
+    font-size: clamp(2.2rem, 4vw, 3.6rem);
+    margin-bottom: 0.75rem;
 }
 
-.recuerdos-landing-text {
-    max-width: 44rem;
-    margin: 0 auto;
-    color: #554d58;
-    font-size: 1.08rem;
+.recuerdos-section-copy p {
+    color: #5b5160;
+    font-size: 1rem;
+    line-height: 1.8;
+    font-style: italic;
+}
+
+.bg-lavanda#photos-section .icon-evento {
+    color: var(--color-dorado);
+    margin-bottom: 1.25rem;
+}
+
+#photos-section h2 {
+    font-size: 3rem;
+    margin-bottom: 1.25rem;
+}
+
+.official-photos-lead {
+    max-width: 37.5rem;
+    margin: 0 auto 0.75rem;
+    color: #555;
+    font-size: 1.2rem;
     font-style: italic;
     line-height: 1.7;
 }
 
-.recuerdos-landing-actions {
+.official-photos-note {
+    max-width: 37.5rem;
+    margin: 0 auto 1.5rem;
+    color: #555;
+    font-size: 1.05rem;
+    font-style: italic;
+    line-height: 1.7;
+}
+
+.official-photos-actions {
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
-    gap: 0.8rem;
-    margin: 1.75rem 0 2rem 0;
+    gap: 0.75rem;
+    margin-top: 1rem;
 }
 
-.recuerdos-landing-actions .btn-rectangular {
-    min-width: 15rem;
+.official-photos-actions[hidden] {
+    display: none;
 }
 
-.recuerdos-illustration {
-    margin-top: 0.5rem;
+.message-board-layout,
+.albums-layout {
+    width: 100%;
+    max-width: 92rem;
+    margin: 0 auto;
+    display: grid;
+    gap: 1.5rem;
+    text-align: left;
+}
+
+.message-board-layout {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: start;
+}
+
+.message-composer {
+    display: grid;
+    gap: 0.9rem;
+    text-align: left;
+}
+
+.message-composer h3 {
+    font-size: 1.6rem;
+}
+
+.message-composer p {
+    color: #5b5160;
+    line-height: 1.7;
+    font-style: italic;
+}
+
+.message-composer-name-pill {
+    display: inline-flex;
+    width: fit-content;
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(197, 161, 230, 0.14);
+    color: #5d4471;
+    font-size: 0.85rem;
+}
+
+.message-composer-input {
+    width: 100%;
+    border: 0.0625rem solid rgba(197, 160, 89, 0.18);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #2f2733;
+    font: inherit;
+    padding: 0.95rem 1rem;
+    resize: vertical;
+    min-height: 8rem;
+}
+
+.message-board-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.message-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.85rem;
+    padding: 0.95rem 0;
+    border-bottom: 0.0625rem solid rgba(197, 160, 89, 0.18);
+}
+
+.message-avatar {
+    width: 2.8rem;
+    height: 2.8rem;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: rgba(197, 160, 89, 0.14);
+    color: #6d5521;
+    font-weight: 600;
+}
+
+.message-body {
+    min-width: 0;
+    text-align: left;
+}
+
+.message-body-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    align-items: baseline;
+    margin-bottom: 0.35rem;
+}
+
+.message-author {
+    font-size: 1rem;
+}
+
+.message-meta {
+    color: #75697b;
+    font-size: 0.82rem;
+}
+
+.message-text {
+    color: #3f3645;
+    line-height: 1.7;
+    font-style: italic;
+}
+
+.presentation-simple {
     display: flex;
     justify-content: center;
 }
 
-.recuerdos-illustration-frame {
-    width: min(100%, 42rem);
-    min-height: 12rem;
-    border-radius: 30px;
-    border: 0.0625rem solid rgba(197, 160, 89, 0.2);
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(197, 161, 230, 0.14));
-    box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.06);
+.albums-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+}
+
+.personal-album,
+.guest-albums {
+    display: grid;
+    gap: 1rem;
+    text-align: left;
+}
+
+.personal-album-header,
+.guest-albums-header {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.personal-album-header h3,
+.guest-albums-header h3 {
+    font-size: 1.55rem;
+}
+
+.guest-albums-header p {
+    color: #5b5160;
+    line-height: 1.7;
+    font-style: italic;
+}
+
+.personal-album-description,
+.guest-albums-header p,
+.album-empty-state p,
+.guest-albums-summary,
+.guest-album-note {
+    color: #5b5160;
+    line-height: 1.7;
+    font-style: italic;
+}
+
+.personal-album-actions {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.personal-upload-progress {
+    display: grid;
+    gap: 0.55rem;
+    padding-top: 0.25rem;
+}
+
+.personal-upload-progress-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    color: #5b5160;
+    font-size: 0.9rem;
+}
+
+.personal-upload-progress-track {
+    height: 0.65rem;
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(197, 160, 89, 0.18);
+}
+
+.personal-upload-progress-bar {
+    width: 0;
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-dorado), rgba(197, 161, 230, 0.95));
+}
+
+.album-empty-state {
+    padding: 0.9rem 0;
+    border-top: 0.0625rem solid rgba(197, 160, 89, 0.16);
+}
+
+.album-empty-icon {
+    display: block;
+    color: var(--color-dorado);
+    font-size: 1.7rem;
+    margin-bottom: 0.6rem;
+}
+
+.personal-album-media-list {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.personal-media-item {
+    display: grid;
+    grid-template-columns: 3.2rem minmax(0, 1fr);
+    gap: 0.85rem;
+    align-items: center;
+    padding: 0.85rem 0;
+    border-bottom: 0.0625rem solid rgba(197, 160, 89, 0.14);
+}
+
+.personal-media-item i {
+    width: 3.2rem;
+    height: 3.2rem;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    color: var(--color-dorado);
+    background: rgba(197, 161, 230, 0.12);
+}
+
+.personal-media-title {
+    font-size: 1.03rem;
+    margin-bottom: 0.2rem;
+}
+
+.personal-media-kind {
+    color: var(--color-dorado);
+    font-size: 0.72rem;
+    letter-spacing: 0.12rem;
+    margin-bottom: 0.2rem;
+    text-transform: uppercase;
+}
+
+.personal-media-meta {
+    color: #665b6d;
+    font-size: 0.9rem;
+}
+
+.guest-search-field {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.guest-search-field span {
+    color: #615667;
+    font-size: 0.88rem;
+    letter-spacing: 0.06rem;
+    text-transform: uppercase;
+}
+
+.guest-search-field input {
+    width: 100%;
+    border-radius: 18px;
+    border: 0.0625rem solid rgba(197, 160, 89, 0.18);
+    background: rgba(255, 255, 255, 0.9);
+    color: #2f2733;
+    font: inherit;
+    padding: 0.95rem 1rem;
+}
+
+.guest-albums-summary {
+    margin-top: 0.25rem;
+}
+
+.guest-albums-grid {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.guest-album-item {
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 1fr);
+    gap: 0.85rem;
+    align-items: center;
+    padding: 0.85rem 0;
+    border-bottom: 0.0625rem solid rgba(197, 160, 89, 0.14);
+}
+
+.guest-album-initials {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: rgba(197, 160, 89, 0.14);
+    color: #70561d;
+    font-weight: 600;
+}
+
+.guest-album-owner {
+    color: var(--color-dorado);
+    font-size: 0.72rem;
+    letter-spacing: 0.12rem;
+    margin-bottom: 0.2rem;
+    text-transform: uppercase;
+}
+
+.guest-album-title {
+    font-size: 1rem;
+    margin-bottom: 0.2rem;
+}
+
+.guest-album-meta {
+    color: #665b6d;
+    font-size: 0.88rem;
+}
+
+.guest-album-note {
+    margin-top: 0.35rem;
+}
+
+.guest-album-copy {
+    min-width: 0;
+    text-align: left;
+}
+
+.accent-rose .guest-album-initials {
+    background: linear-gradient(145deg, #e7b7bf, #c5a059);
+    color: var(--color-blanco);
+}
+
+.accent-lavender .guest-album-initials {
+    background: linear-gradient(145deg, #c5a1e6, #8f6cbf);
+    color: var(--color-blanco);
+}
+
+.accent-sand .guest-album-initials {
+    background: linear-gradient(145deg, #ead7b5, #c5a059);
+    color: var(--color-blanco);
+}
+
+.accent-plum .guest-album-initials {
+    background: linear-gradient(145deg, #a26cc8, #6f4a92);
+    color: var(--color-blanco);
+}
+
+.access-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.75rem;
-    padding: 1.5rem;
-    text-align: center;
+    padding: 1.25rem;
+    background: rgba(0, 0, 0, 0.45);
 }
 
-.recuerdos-illustration-icon {
+.access-modal[hidden] {
+    display: none;
+}
+
+.access-modal-card {
+    width: min(100%, 34rem);
+    max-height: calc(100vh - 2.5rem);
+    overflow-y: auto;
+    background: var(--bg-beige);
+    border: 0.0625rem solid var(--color-dorado);
+    box-shadow: 0 0.625rem 1.875rem rgba(0, 0, 0, 0.18);
+    padding: 2.5rem;
+}
+
+.access-modal-kicker {
     color: var(--color-dorado);
-    font-size: 2rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.18rem;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
 }
 
-.recuerdos-illustration-frame p {
-    color: #5f5764;
+.access-modal-card h2 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.access-modal-text {
+    font-size: 1.05rem;
     font-style: italic;
-    margin: 0;
+    margin-bottom: 0.75rem;
 }
 
-.recuerdos-home-section {
-    padding-top: 1rem;
+.access-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 2rem 0 1.5rem 0;
 }
 
-.recuerdos-card-link {
-    text-decoration: none;
-    color: inherit;
+.access-option {
+    background: var(--color-blanco);
+    border: 0.0625rem solid #ddd;
+    color: var(--color-texto);
+    padding: 0.9rem 0.75rem;
+    font-size: 0.95rem;
 }
 
-.recuerdos-card-link:focus-visible {
-    outline: 0.2rem solid rgba(197, 160, 89, 0.4);
-    outline-offset: 0.2rem;
+.access-option.active {
+    border-color: var(--color-dorado);
+    box-shadow: 0 0.25rem 0.9375rem rgba(0, 0, 0, 0.05);
 }
 
-.recuerdos-page-card,
-.presentation-page-card {
-    margin-top: 0.5rem;
+.access-form {
+    text-align: left;
+}
+
+.access-form-question {
+    margin-bottom: 1rem;
+    text-align: center;
+    font-style: italic;
+}
+
+.access-form label {
+    display: block;
+    margin: 0.9rem 0 0.35rem 0;
+    font-size: 0.9rem;
+    letter-spacing: 0.0625rem;
+    text-transform: uppercase;
+}
+
+.access-form input {
+    width: 100%;
+    border: 0.0625rem solid var(--color-dorado);
+    background: var(--color-blanco);
+    color: var(--color-texto);
+    font-family: var(--font-textos);
+    font-size: 1rem;
+    padding: 0.75rem;
+}
+
+.access-form .btn-rectangular {
+    width: 100%;
+    margin-top: 1.5rem;
+}
+
+.access-back-btn {
+    width: 100%;
+    margin-top: 0.75rem;
+    border: none;
+    background: transparent;
+    color: var(--color-texto);
+    font-size: 0.92rem;
+    text-decoration: underline;
+    text-underline-offset: 0.2rem;
+    opacity: 0.8;
+}
+
+.access-back-btn:hover {
+    opacity: 1;
+    color: var(--color-dorado);
+}
+
+.access-feedback {
+    min-height: 1.5rem;
+    margin-top: 1rem;
+    color: var(--color-dorado);
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+body.modal-open {
+    overflow: hidden;
+}
+
+.toast-container {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    pointer-events: none;
+}
+
+.toast {
+    background: var(--color-blanco);
+    border-left: 4px solid var(--color-dorado);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    padding: 1rem 1.5rem;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 18rem;
+    max-width: 24rem;
+    pointer-events: auto;
+    animation: toastIn 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.toast.hide {
+    animation: toastOut 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.toast-icon {
+    color: var(--color-dorado);
+    font-size: 1.25rem;
+}
+
+.toast-message {
+    color: var(--color-texto);
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.toast-success { border-left-color: #4CAF50; }
+.toast-success .toast-icon { color: #4CAF50; }
+
+.toast-error { border-left-color: #F44336; }
+.toast-error .toast-icon { color: #F44336; }
+
+@keyframes toastIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes toastOut {
+    from {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100%) scale(0.9);
+    }
+}
+
+@media (max-width: 900px) {
+    .message-board-layout,
+    .albums-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .message-board-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .access-options {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 560px) {
-    .recuerdos-landing {
-        padding-top: 3rem;
-        padding-bottom: 2.25rem;
+    .recuerdos-section {
+        padding-inline: 0.9rem;
     }
 
-    .recuerdos-landing-actions .btn-rectangular {
+    .access-modal-card {
+        padding: 1.35rem 1rem;
+    }
+
+    .access-modal-card h2 {
+        font-size: 2.2rem;
+    }
+
+    .toast-container {
+        bottom: 1.25rem;
+        right: 1.25rem;
+        left: 1.25rem;
+    }
+
+    .toast {
+        min-width: auto;
         width: 100%;
-        min-width: 0;
-    }
-
-    .recuerdos-illustration-frame {
-        min-height: 10rem;
     }
 }

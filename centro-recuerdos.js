@@ -5,7 +5,84 @@ const recuerdosConfig = {
     access: {
         eventCode: "MARCELA-JORGE-2026",
         adminCode: "NOVIOS-2026"
-    },
+    }
+};
+
+const recuerdosDemoData = {
+    navigation: [
+        {
+            target: "photos-section",
+            label: "Fotos Profesionales"
+        },
+        {
+            target: "messages-section",
+            label: "Muro"
+        },
+        {
+            target: "albums-section",
+            label: "Centro de Recuerdos"
+        }
+    ],
+    messageBoardSeed: [
+        {
+            initials: "MC",
+            author: "Mica",
+            message: "Gracias por acompañarnos en este momento tan especial.",
+            meta: "Hace unos minutos"
+        },
+        {
+            initials: "JR",
+            author: "Juli",
+            message: "Les deseo una vida llena de amor y momentos inolvidables.",
+            meta: "Hace 1 hora"
+        },
+        {
+            initials: "FA",
+            author: "Familia",
+            message: "Qué lindo poder dejar saludos en un espacio tan cuidado.",
+            meta: "Hoy"
+        },
+        {
+            initials: "AM",
+            author: "Amigos",
+            message: "Cada mensaje suma un recuerdo más a esta historia compartida.",
+            meta: "Hoy"
+        }
+    ],
+    albumDirectory: [
+        {
+            initials: "FC",
+            ownerName: "Cami",
+            title: "Familia",
+            photoCount: 14,
+            note: "Álbum compartido con recuerdos familiares.",
+            accent: "accent-rose"
+        },
+        {
+            initials: "AS",
+            ownerName: "Sofi",
+            title: "Amigos",
+            photoCount: 9,
+            note: "Momentos de pista y mesa.",
+            accent: "accent-lavender"
+        },
+        {
+            initials: "MN",
+            ownerName: "Nico",
+            title: "Mesa de fotos",
+            photoCount: 11,
+            note: "Recuerdos de la celebración.",
+            accent: "accent-sand"
+        },
+        {
+            initials: "LF",
+            ownerName: "Lau",
+            title: "Fiesta",
+            photoCount: 7,
+            note: "Fotos espontáneas para volver a mirar.",
+            accent: "accent-plum"
+        }
+    ],
     guestAlbumPreviewSeed: [
         {
             id: "demo-1",
@@ -39,68 +116,30 @@ const recuerdosConfig = {
             accentClass: "accent-plum",
             initials: "LF"
         }
-    ],
-    officialAlbumPreviewSeed: [
-        {
-            id: "official-1",
-            image: "assets/img-1.png",
-            title: "Entrada soñada",
-            meta: "Fotografía oficial seleccionada"
-        },
-        {
-            id: "official-2",
-            image: "assets/img-2.png",
-            title: "La noche",
-            meta: "Momento destacado del casamiento"
-        },
-        {
-            id: "official-3",
-            image: "assets/img-3.png",
-            title: "Recuerdo ilustrado",
-            meta: "Detalle visual del evento"
-        }
-    ],
-    messageBoardSeed: [
-        {
-            initials: "MC",
-            author: "Mica",
-            message: "Gracias por acompañarnos en este momento tan especial y por dejar un recuerdo para siempre.",
-            meta: "Hace unos minutos"
-        },
-        {
-            initials: "JR",
-            author: "Juli",
-            message: "Les deseo una vida llena de amor, música y momentos inolvidables.",
-            meta: "Hace 1 hora"
-        },
-        {
-            initials: "FA",
-            author: "Familia",
-            message: "Qué lindo poder dejar saludos en un muro que guarda todo con tanta elegancia.",
-            meta: "Hoy"
-        }
-    ],
-    presentationSlides: [
-        {
-            image: "assets/img-1.png",
-            title: "Primer recuerdo",
-            text: "Imágenes elegidas para iniciar la presentación automática."
-        },
-        {
-            image: "assets/img-2.png",
-            title: "Momento especial",
-            text: "La galería irá alternando fotos con transición suave."
-        },
-        {
-            image: "assets/img-3.png",
-            title: "Recuerdo compartido",
-            text: "Las fotos disponibles se irán mezclando en secuencia."
-        }
     ]
 };
 
 const accessStorageKey = "centroRecuerdosAccess";
 const albumStorageKey = "centroRecuerdosAlbums";
+
+function escapeHTML(value) {
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll("\"", "&quot;")
+        .replaceAll("'", "&#39;");
+}
+
+function initialsFromName(name) {
+    return name
+        .split(" ")
+        .map((word) => word.trim().charAt(0))
+        .filter(Boolean)
+        .slice(0, 2)
+        .join("")
+        .toUpperCase();
+}
 
 function getStoredAccessProfile() {
     const storedProfile = localStorage.getItem(accessStorageKey);
@@ -122,7 +161,16 @@ function clearAccessProfile() {
 
 function getStoredAlbums() {
     const storedAlbums = localStorage.getItem(albumStorageKey);
-    return storedAlbums ? JSON.parse(storedAlbums) : [];
+
+    if (!storedAlbums) {
+        return [];
+    }
+
+    try {
+        return JSON.parse(storedAlbums);
+    } catch (error) {
+        return [];
+    }
 }
 
 function saveAlbums(albums) {
@@ -132,7 +180,7 @@ function saveAlbums(albums) {
 function ensurePersonalAlbum(guestName) {
     const normalizedName = guestName.trim();
     const albums = getStoredAlbums();
-    const existingAlbum = albums.find((album) => album.ownerName === normalizedName && album.type === "guest");
+    const existingAlbum = albums.find((album) => album.type === "guest" && album.ownerName === normalizedName);
 
     if (existingAlbum) {
         return existingAlbum;
@@ -154,37 +202,9 @@ function ensurePersonalAlbum(guestName) {
     return newAlbum;
 }
 
-function updateLandingContent() {
-    const greetingElement = document.getElementById("recuerdos-greeting");
-    const welcomeTextElement = document.getElementById("recuerdos-welcome-text");
-    const profile = getStoredAccessProfile();
-
-    if (!greetingElement || !welcomeTextElement) {
-        return;
-    }
-
-    if (profile && profile.type === "guest" && profile.name) {
-        document.title = "Centro de Recuerdos - " + profile.name;
-        greetingElement.textContent = "Hola, " + profile.name + " ❤️";
-        welcomeTextElement.textContent = "Tu identidad quedó guardada en este dispositivo. Desde acá podés recorrer cada parte del Centro de Recuerdos.";
-        ensurePersonalAlbum(profile.name);
-        return;
-    }
-
-    if (profile && profile.type === "admin") {
-        document.title = "Centro de Recuerdos";
-        greetingElement.textContent = "Bienvenido al Centro de Recuerdos";
-        welcomeTextElement.textContent = "Accediste con permisos de administración para acompañar y curar los recuerdos del evento.";
-        return;
-    }
-
-    document.title = "Centro de Recuerdos";
-    greetingElement.textContent = "Bienvenido al Centro de Recuerdos";
-    welcomeTextElement.textContent = "No hay una sesión activa. Volvé a la invitación para ingresar como invitado o administrador.";
-}
-
 function openAccessModal() {
     const accessModal = document.getElementById("access-modal");
+
     if (!accessModal) {
         return;
     }
@@ -195,6 +215,7 @@ function openAccessModal() {
 
 function closeAccessModal() {
     const accessModal = document.getElementById("access-modal");
+
     if (!accessModal) {
         return;
     }
@@ -205,23 +226,10 @@ function closeAccessModal() {
 
 function showAccessFeedback(message) {
     const feedbackElement = document.getElementById("access-feedback");
+
     if (feedbackElement) {
         feedbackElement.textContent = message;
     }
-}
-
-function getCurrentAccessView() {
-    const successState = document.getElementById("access-modal-success");
-    if (successState && !successState.hidden) {
-        return "success";
-    }
-
-    const returningState = document.getElementById("access-modal-returning");
-    if (returningState && !returningState.hidden) {
-        return "returning";
-    }
-
-    return "welcome";
 }
 
 function setAccessView(view, profile = getStoredAccessProfile()) {
@@ -284,9 +292,7 @@ function setAccessView(view, profile = getStoredAccessProfile()) {
 
     if (view === "success") {
         if (successName) {
-            successName.textContent = profile && profile.type === "guest" && profile.name
-                ? "Hola, " + profile.name
-                : "Bienvenido";
+            successName.textContent = profile && profile.type === "guest" && profile.name ? "Hola, " + profile.name : "Bienvenido";
         }
 
         if (openAdminFormBtn) {
@@ -333,41 +339,235 @@ function showAccessSuccess(profile = getStoredAccessProfile()) {
     setAccessView("success", profile);
 }
 
-function showToast(message, variant = "default") {
-    const toastContainer = document.getElementById("toast-container");
+function renderRecuerdosAppShell() {
+    const root = document.getElementById("recuerdos-app-root");
 
-    if (!toastContainer) {
+    if (!root) {
         return;
     }
 
-    const toast = document.createElement("div");
-    const toastIconClass = variant === "success"
-        ? "fa-solid fa-circle-check"
-        : variant === "error"
-            ? "fa-solid fa-triangle-exclamation"
-            : "fa-solid fa-circle-info";
+    root.innerHTML = `
+        <header class="recuerdos-app-hero section" data-section="recuerdos-home" id="recuerdos-home">
+            <h1 id="recuerdos-greeting" class="recuerdos-app-title">Bienvenido al Centro de Recuerdos</h1>
+            <p id="recuerdos-welcome-text" class="recuerdos-app-text">Un espacio para guardar, recorrer y seguir construyendo los recuerdos del casamiento.</p>
 
-    toast.className = "toast" + (variant === "success" ? " toast-success" : variant === "error" ? " toast-error" : "");
-    toast.innerHTML = `
-        <i class="${toastIconClass} toast-icon" aria-hidden="true"></i>
-        <span class="toast-message">${message}</span>
+            <div class="recuerdos-hero-actions">
+                <button id="change-user-btn" class="btn-rectangular btn-secundario" type="button">Cambiar de usuario</button>
+                <a class="btn-rectangular" href="index.html">Volver a la invitación</a>
+            </div>
+        </header>
+
+        <nav class="recuerdos-nav" aria-label="Navegación principal del Centro de Recuerdos">
+            <div class="recuerdos-nav-shell">
+                ${recuerdosDemoData.navigation.map((item) => `
+                    <a class="recuerdos-nav-link" href="#${escapeHTML(item.target)}">${escapeHTML(item.label)}</a>
+                `).join("")}
+            </div>
+        </nav>
+
+        <section id="photos-section" class="section bg-lavanda" data-section="photos-section"></section>
+        <section id="messages-section" class="section recuerdos-section recuerdos-section-messages" data-section="messages-section"></section>
+        <section id="presentation-section" class="section recuerdos-section recuerdos-section-presentation bg-lavanda" data-section="presentation-section"></section>
+        <section id="albums-section" class="section recuerdos-section recuerdos-section-albums" data-section="albums-section"></section>
     `;
 
-    toastContainer.appendChild(toast);
+    const changeUserBtn = document.getElementById("change-user-btn");
+    if (changeUserBtn) {
+        changeUserBtn.addEventListener("click", handleChangeUser);
+    }
+}
 
-    window.setTimeout(() => {
-        toast.classList.add("hide");
-        window.setTimeout(() => {
-            if (toast.parentNode) {
-                toast.parentNode.removeChild(toast);
+function renderAccessModalShell() {
+    const modal = document.getElementById("access-modal");
+
+    if (!modal) {
+        return;
+    }
+
+    modal.innerHTML = `
+        <div class="access-modal-card">
+            <div id="access-modal-welcome" class="access-modal-state">
+                <p class="access-modal-kicker">Centro de Recuerdos</p>
+                <h2 id="access-modal-title"><i class="fa-solid fa-heart" style="color: var(--color-dorado); font-size: 0.85em; margin-right: 0.5rem;"></i>Bienvenidos</h2>
+                <p class="access-modal-text">Elegí cómo ingresar para continuar con el recuerdo compartido del evento.</p>
+
+                <div class="access-options" aria-label="Opciones de ingreso">
+                    <button id="guest-access-option" class="access-option active" type="button"><i class="fa-solid fa-users" style="margin-right: 0.5rem;"></i>Entrar como invitado</button>
+                    <button id="admin-access-option" class="access-option" type="button"><i class="fa-solid fa-ring" style="margin-right: 0.5rem;"></i>Entrar como administrador</button>
+                </div>
+            </div>
+
+            <div id="access-modal-returning" class="access-modal-state" hidden>
+                <p class="access-modal-kicker">Centro de Recuerdos</p>
+                <h2 id="access-modal-returning-title"><i class="fa-solid fa-heart" style="color: var(--color-dorado); font-size: 0.85em; margin-right: 0.5rem;"></i>Bienvenido nuevamente ❤️</h2>
+                <p id="access-modal-returning-name" class="access-modal-text"></p>
+
+                <div class="returning-actions">
+                    <button id="continue-session-btn" class="btn-rectangular" type="button">Continuar</button>
+                    <button id="switch-user-btn" class="btn-rectangular btn-secundario" type="button">Cambiar de usuario</button>
+                    <button id="open-admin-form-btn" class="btn-rectangular btn-secundario" type="button">Ingresar como administrador</button>
+                </div>
+            </div>
+
+            <div id="access-modal-success" class="access-modal-state" hidden>
+                <p class="access-modal-kicker">Centro de Recuerdos</p>
+                <h2 id="access-modal-success-title"><i class="fa-solid fa-heart" style="color: var(--color-dorado); font-size: 0.85em; margin-right: 0.5rem;"></i><span id="access-modal-success-name"></span> ❤️</h2>
+                <p class="access-modal-text">Tu identidad quedó guardada en este dispositivo. Podés cerrar este mensaje y seguir recorriendo el Centro de Recuerdos.</p>
+                <button id="close-access-success-btn" class="btn-rectangular" type="button">Cerrar</button>
+            </div>
+
+            <form id="guest-access-form" class="access-form" hidden>
+                <p class="access-form-question">¿Cómo querés que aparezca tu álbum?</p>
+                <label for="guest-name">Nombre</label>
+                <input id="guest-name" name="guest-name" type="text" autocomplete="name" required>
+
+                <label for="event-code">Código del evento</label>
+                <input id="event-code" name="event-code" type="text" autocomplete="off" required>
+
+                <button class="btn-rectangular" type="submit">Ingresar como invitado</button>
+                <button id="guest-back-btn" class="access-back-btn" type="button">Volver</button>
+            </form>
+
+            <form id="admin-access-form" class="access-form" hidden>
+                <label for="admin-code">Código administrador</label>
+                <input id="admin-code" name="admin-code" type="text" autocomplete="off" required>
+
+                <button class="btn-rectangular" type="submit">Ingresar como administrador</button>
+                <button id="admin-back-btn" class="access-back-btn" type="button">Volver</button>
+            </form>
+
+            <p id="access-feedback" class="access-feedback" aria-live="polite"></p>
+        </div>
+    `;
+}
+
+function renderOfficialPhotosSection() {
+    const section = document.getElementById("photos-section");
+
+    if (!section) {
+        return;
+    }
+
+    const profile = getStoredAccessProfile();
+    const isAdmin = profile && profile.type === "admin";
+
+    section.className = "section bg-lavanda";
+
+    section.innerHTML = `
+        <i class="fa-solid fa-camera icon-evento" aria-hidden="true"></i>
+        <h2>Álbum Oficial</h2>
+        <p class="official-photos-lead">Las fotografías oficiales del casamiento estarán disponibles muy pronto.</p>
+        <p class="official-photos-note">Los novios las publicarán cuando finalice el evento.</p>
+
+        <div class="official-photos-actions"${isAdmin ? "" : " hidden"}>
+            <button class="btn-rectangular" type="button">Subir fotografías</button>
+            <button class="btn-rectangular btn-secundario" type="button">Administrar fotografías</button>
+        </div>
+    `;
+}
+
+function renderMessageBoardSection() {
+    const section = document.getElementById("messages-section");
+
+    if (!section) {
+        return;
+    }
+
+    section.innerHTML = `
+        <div class="recuerdos-section-copy">
+            <p class="recuerdos-section-kicker">Muro</p>
+            <h2>Muro de Comentarios y Saludos</h2>
+            <p>Dejá un mensaje breve y seguí recorriendo los recuerdos compartidos del casamiento.</p>
+        </div>
+
+        <div class="message-board-layout">
+            <form class="message-composer" aria-label="Escribir un saludo">
+                <h3 id="message-composer-title">Firmá tu recuerdo</h3>
+                <p id="message-composer-text">El nombre se toma de la sesión iniciada previamente.</p>
+
+                <div class="message-composer-name-pill" id="message-composer-name-pill"></div>
+                <textarea id="message-composer-input" class="message-composer-input" placeholder="Dejá un mensaje breve..." rows="4"></textarea>
+                <button id="message-composer-btn" class="btn-rectangular" type="button">Preparar saludo</button>
+            </form>
+
+            <div class="message-board-grid" id="message-board-grid" aria-live="polite"></div>
+        </div>
+    `;
+
+    const profile = getStoredAccessProfile();
+    const namePill = document.getElementById("message-composer-name-pill");
+
+    if (namePill) {
+        namePill.textContent = profile && profile.type === "guest" && profile.name
+            ? profile.name
+            : profile && profile.type === "admin"
+                ? "Administración"
+                : "Invitado";
+    }
+
+    renderMessageBoardCards();
+}
+
+function renderMessageBoardCards() {
+    const boardElement = document.getElementById("message-board-grid");
+
+    if (!boardElement) {
+        return;
+    }
+
+    boardElement.innerHTML = recuerdosDemoData.messageBoardSeed.map((message) => `
+        <article class="message-card">
+            <span class="message-avatar">${escapeHTML(message.initials)}</span>
+            <div class="message-body">
+                <div class="message-body-head">
+                    <strong class="message-author">${escapeHTML(message.author)}</strong>
+                    <span class="message-meta">${escapeHTML(message.meta)}</span>
+                </div>
+                <p class="message-text">${escapeHTML(message.message)}</p>
+            </div>
+        </article>
+    `).join("");
+}
+
+function renderPresentationSection() {
+    const section = document.getElementById("presentation-section");
+
+    if (!section) {
+        return;
+    }
+
+    section.innerHTML = `
+        <div class="recuerdos-section-copy">
+            <p class="recuerdos-section-kicker">Presentación</p>
+            <h2>Presentación</h2>
+            <p>Una presentación simple para revivir el evento.</p>
+        </div>
+
+        <div class="presentation-simple">
+            <button id="presentation-fullscreen-btn" class="btn-rectangular" type="button">Iniciar presentación</button>
+        </div>
+    `;
+
+    const button = document.getElementById("presentation-fullscreen-btn");
+    if (button) {
+        button.addEventListener("click", () => {
+            const target = document.getElementById("presentation-section");
+
+            if (target && target.requestFullscreen) {
+                target.requestFullscreen().catch(() => {
+            showToast("La presentación se abrirá cuando el navegador lo permita.", "default");
+                });
+                return;
             }
-        }, 400);
-    }, 3000);
+
+            showToast("La presentación está lista.", "default");
+        });
+    }
 }
 
 function getVisibleGuestAlbums() {
     const storedAlbums = getStoredAlbums().filter((album) => album.type === "guest");
-    const albumsWithContent = storedAlbums.filter((album) => album.visible && ((album.photos && album.photos.length > 0) || album.video));
+    const albumsWithContent = storedAlbums.filter((album) => album.visible && (((album.photos || []).length > 0) || album.video));
 
     if (albumsWithContent.length > 0) {
         return albumsWithContent.map((album, index) => ({
@@ -376,16 +576,11 @@ function getVisibleGuestAlbums() {
             ownerName: album.ownerName,
             photoCount: (album.photos ? album.photos.length : 0) + (album.video ? 1 : 0),
             accentClass: ["accent-rose", "accent-lavender", "accent-sand", "accent-plum"][index % 4],
-            initials: album.ownerName
-                .split(" ")
-                .map((word) => word.charAt(0))
-                .slice(0, 2)
-                .join("")
-                .toUpperCase()
+            initials: initialsFromName(album.ownerName)
         }));
     }
 
-    return recuerdosConfig.guestAlbumPreviewSeed;
+    return recuerdosDemoData.guestAlbumPreviewSeed;
 }
 
 function getActiveGuestAlbum() {
@@ -397,31 +592,6 @@ function getActiveGuestAlbum() {
 
     const storedAlbums = getStoredAlbums().filter((album) => album.type === "guest");
     return storedAlbums.find((album) => album.ownerName === profile.name) || null;
-}
-
-function renderGuestAlbumsGrid() {
-    const gridElement = document.getElementById("guest-albums-grid");
-    const summaryElement = document.getElementById("guest-albums-summary");
-    const guestAlbums = getVisibleGuestAlbums();
-
-    if (!gridElement || !summaryElement) {
-        return;
-    }
-
-    gridElement.innerHTML = guestAlbums.map((album) => `
-        <article class="guest-album-card ${album.accentClass}">
-            <div class="guest-album-cover" aria-hidden="true">
-                <span class="guest-album-initials">${album.initials}</span>
-            </div>
-            <div class="guest-album-body">
-                <p class="guest-album-owner">${album.ownerName}</p>
-                <h3 class="guest-album-title">${album.title}</h3>
-                <p class="guest-album-meta">${album.photoCount} recuerdo${album.photoCount === 1 ? "" : "s"} compartido${album.photoCount === 1 ? "" : "s"}</p>
-            </div>
-        </article>
-    `).join("");
-
-    summaryElement.textContent = `${guestAlbums.length} álbumes visibles para recorrer en esta sección.`;
 }
 
 function renderPersonalAlbumPreview() {
@@ -439,40 +609,38 @@ function renderPersonalAlbumPreview() {
         return;
     }
 
-    const guestName = profile && profile.type === "guest" && profile.name ? profile.name : "Mi álbum";
+            const guestName = profile && profile.type === "guest" && profile.name ? profile.name : "Mi álbum";
     const hasContent = activeAlbum && (((activeAlbum.photos || []).length > 0) || activeAlbum.video);
 
     titleElement.textContent = guestName === "Mi álbum" ? "Mi álbum" : "Mi álbum, " + guestName;
     descriptionElement.textContent = hasContent
-        ? "Así se verán tus fotos y tu único video organizados en tu álbum propio."
-        : "Subí tus fotos y tu único video para mantenerlos ordenados en tu álbum propio.";
+        ? "Así se verán tus fotos y tu video organizados en tu álbum propio."
+        : "Subí tus fotos y tu video para mantenerlos ordenados en tu álbum propio.";
 
     const items = hasContent
         ? [
             ...(activeAlbum.photos || []).map((photo, index) => ({
                 kind: "photo",
                 title: photo.title || ("Foto " + (index + 1)),
-                meta: "Guardada localmente como vista previa",
+                meta: "Guardada en tu álbum",
                 iconClass: "fa-solid fa-image"
             })),
             ...(activeAlbum.video ? [{
                 kind: "video",
                 title: activeAlbum.video.title || "Video único",
-                meta: "Guardado localmente como vista previa",
+                meta: "Guardado en tu álbum",
                 iconClass: "fa-solid fa-video"
             }] : [])
         ]
         : [];
 
-    listElement.innerHTML = items.map((item, index) => `
-        <article class="personal-media-card ${item.kind === "video" ? "is-video" : "is-photo"}">
-            <div class="personal-media-thumb personal-media-thumb-${(index % 4) + 1}">
-                <i class="${item.iconClass}" aria-hidden="true"></i>
-            </div>
-            <div class="personal-media-body">
+    listElement.innerHTML = items.map((item) => `
+        <article class="personal-media-item ${item.kind === "video" ? "is-video" : "is-photo"}">
+            <i class="${escapeHTML(item.iconClass)}" aria-hidden="true"></i>
+            <div class="personal-media-copy">
                 <p class="personal-media-kind">${item.kind === "video" ? "Video" : "Foto"}</p>
-                <h4 class="personal-media-title">${item.title}</h4>
-                <p class="personal-media-meta">${item.meta}</p>
+                <h4 class="personal-media-title">${escapeHTML(item.title)}</h4>
+                <p class="personal-media-meta">${escapeHTML(item.meta)}</p>
             </div>
         </article>
     `).join("");
@@ -484,145 +652,172 @@ function renderPersonalAlbumPreview() {
     progressTextElement.textContent = "0%";
 }
 
-function renderOfficialAlbumPreview() {
-    const listElement = document.getElementById("official-album-grid");
-    const modeElement = document.getElementById("official-view-mode");
-    const descriptionElement = document.getElementById("official-album-description");
-    const titleElement = document.getElementById("official-album-title");
-    const actionsElement = document.getElementById("official-album-actions");
-    const profile = getStoredAccessProfile();
-    const isAdmin = profile && profile.type === "admin";
+function renderAlbumsSection() {
+    const section = document.getElementById("albums-section");
+    const searchInput = document.getElementById("guest-album-search");
+    const summaryElement = document.getElementById("guest-albums-summary");
+    const gridElement = document.getElementById("guest-albums-grid");
 
-    if (!listElement || !modeElement || !descriptionElement || !titleElement || !actionsElement) {
+    if (!section) {
         return;
     }
 
-    titleElement.textContent = isAdmin ? "Galería oficial en modo administrador" : "Galería oficial en modo invitado";
-    descriptionElement.textContent = isAdmin
-        ? "Como administrador, esta vista deja preparada la curaduría del álbum oficial."
-        : "Como invitado, solo podés contemplar la selección oficial de los novios.";
-
-    modeElement.innerHTML = `
-        <div class="official-mode-badge ${isAdmin ? "is-admin" : "is-guest"}">
-            <span class="official-mode-label">${isAdmin ? "Modo administrador" : "Modo invitado"}</span>
-            <span class="official-mode-text">${isAdmin ? "Herramientas listas para curar fotos oficiales." : "Vista de solo lectura para invitados."}</span>
+    section.innerHTML = `
+        <div class="recuerdos-section-copy">
+            <p class="recuerdos-section-kicker">Álbumes</p>
+            <h2>Mis Recuerdos y álbumes de invitados</h2>
+            <p>El espacio reúne tu álbum personal, el buscador y la lista de álbumes visibles para recorrer.</p>
         </div>
-    `;
 
-    actionsElement.innerHTML = isAdmin ? `
-        <div class="official-album-toolbar" aria-label="Herramientas del álbum oficial">
-            <span class="official-tool-pill">Subir</span>
-            <span class="official-tool-pill">Editar</span>
-            <span class="official-tool-pill">Eliminar</span>
-            <span class="official-tool-pill">Organizar</span>
-        </div>
-    ` : `
-        <div class="official-readonly-note">
-            <p>El álbum oficial pertenece a los novios. Los invitados solo pueden visualizarlo.</p>
-        </div>
-    `;
-
-    listElement.innerHTML = recuerdosConfig.officialAlbumPreviewSeed.map((item, index) => `
-        <article class="official-album-card ${index === 0 ? "is-featured" : ""}">
-            <div class="official-album-cover">
-                <img src="${item.image}" alt="${item.title}" loading="lazy">
-            </div>
-            <div class="official-album-body">
-                <p class="official-album-kind">Álbum oficial</p>
-                <h4 class="official-album-title">${item.title}</h4>
-                <p class="official-album-meta">${item.meta}</p>
-            </div>
-        </article>
-    `).join("");
-}
-
-function renderMessageBoard() {
-    const boardElement = document.getElementById("message-board-grid");
-
-    if (!boardElement) {
-        return;
-    }
-
-    boardElement.innerHTML = recuerdosConfig.messageBoardSeed.map((message, index) => `
-        <article class="message-card message-card-${(index % 3) + 1}">
-            <div class="message-card-header">
-                <span class="message-avatar">${message.initials}</span>
-                <div>
-                    <p class="message-author">${message.author}</p>
-                    <p class="message-meta">${message.meta}</p>
+        <div class="albums-layout">
+            <article class="personal-album">
+                <div class="personal-album-header">
+                    <p class="recuerdos-section-kicker">Mis Recuerdos</p>
+                    <h3 id="personal-album-title">Mi álbum</h3>
+                    <p id="personal-album-description" class="personal-album-description">Tu espacio personal se completa con fotos y video cuando se conecta la persistencia.</p>
                 </div>
-            </div>
-            <p class="message-text">${message.message}</p>
-        </article>
-    `).join("");
-}
 
-function renderPresentation() {
-    const slideImage = document.getElementById("presentation-slide-image");
-    const slideKicker = document.getElementById("presentation-slide-kicker");
-    const slideTitle = document.getElementById("presentation-slide-title");
-    const slideText = document.getElementById("presentation-slide-text");
-    const thumbsElement = document.getElementById("presentation-thumbs");
+                <div class="personal-album-actions" aria-label="Acciones del álbum personal">
+                    <button id="personal-upload-photos-btn" class="btn-rectangular" type="button"><i class="fa-solid fa-camera" aria-hidden="true" style="margin-right: 0.45rem;"></i>Subir fotografías</button>
+                    <button id="personal-upload-video-btn" class="btn-rectangular btn-secundario" type="button"><i class="fa-solid fa-video" aria-hidden="true" style="margin-right: 0.45rem;"></i>Subir video</button>
+                </div>
 
-    if (!slideImage || !slideKicker || !slideTitle || !slideText || !thumbsElement) {
-        return;
-    }
+                <div id="personal-upload-progress" class="personal-upload-progress" hidden aria-live="polite">
+                    <div class="personal-upload-progress-label">
+                        <span>Organizando tu recuerdo</span>
+                        <span id="personal-upload-progress-text">0%</span>
+                    </div>
+                    <div class="personal-upload-progress-track">
+                        <div id="personal-upload-progress-bar" class="personal-upload-progress-bar"></div>
+                    </div>
+                </div>
 
-    thumbsElement.innerHTML = recuerdosConfig.presentationSlides.map((slide, index) => `
-        <span class="presentation-thumb ${index === 0 ? "is-active" : ""}"></span>
-    `).join("");
+                <div id="personal-album-empty-state" class="album-empty-state" hidden>
+                    <i class="fa-solid fa-photo-film album-empty-icon" aria-hidden="true"></i>
+                    <h3>Tu álbum está esperando recuerdos</h3>
+                    <p>Cuando haya contenido real, este bloque mostrará el material de tu sesión.</p>
+                </div>
 
-    const applySlide = (index) => {
-        const slide = recuerdosConfig.presentationSlides[index];
+                <div id="personal-album-media-list" class="personal-album-media-list" aria-live="polite"></div>
+            </article>
 
-        slideImage.src = slide.image;
-        slideImage.alt = slide.title;
-        slideKicker.textContent = "Centro de Recuerdos";
-        slideTitle.textContent = slide.title;
-        slideText.textContent = slide.text;
+            <aside class="guest-albums">
+                <div class="guest-albums-header">
+                    <p class="recuerdos-section-kicker">Buscar invitados</p>
+                    <h3>Explorar álbumes</h3>
+                    <p>El listado se mantiene simple y ordenado.</p>
+                </div>
 
-        thumbsElement.querySelectorAll(".presentation-thumb").forEach((thumb, thumbIndex) => {
-            thumb.classList.toggle("is-active", thumbIndex === index);
-        });
+                <label class="guest-search-field" for="guest-album-search">
+                    <span>Buscar por nombre</span>
+                    <input id="guest-album-search" type="search" autocomplete="off" placeholder="Escribí un nombre para explorar">
+                </label>
+
+                <div class="guest-albums-summary" id="guest-albums-summary">Todavía no se están mostrando álbumes de invitados.</div>
+                <div id="guest-albums-grid" class="guest-albums-grid" aria-live="polite"></div>
+            </aside>
+        </div>
+    `;
+
+    const refreshedSearchInput = document.getElementById("guest-album-search");
+    const refreshedSummaryElement = document.getElementById("guest-albums-summary");
+    const refreshedGridElement = document.getElementById("guest-albums-grid");
+    const profile = getStoredAccessProfile();
+
+    renderPersonalAlbumPreview();
+
+    const renderDirectory = (query) => {
+        if (!refreshedSummaryElement || !refreshedGridElement) {
+            return;
+        }
+
+        const normalizedQuery = query.trim().toLowerCase();
+
+        if (!normalizedQuery) {
+            const defaults = recuerdosDemoData.guestAlbumPreviewSeed;
+            refreshedSummaryElement.textContent = `${defaults.length} álbumes visibles para recorrer en esta sección.`;
+            refreshedGridElement.innerHTML = defaults.map((album) => `
+                <article class="guest-album-item ${album.accentClass}">
+                    <span class="guest-album-initials" aria-hidden="true">${escapeHTML(album.initials)}</span>
+                    <div class="guest-album-copy">
+                        <p class="guest-album-owner">${escapeHTML(album.ownerName)}</p>
+                        <h4 class="guest-album-title">${escapeHTML(album.title)}</h4>
+                    <p class="guest-album-meta">${album.photoCount} recuerdo${album.photoCount === 1 ? "" : "s"} compartido${album.photoCount === 1 ? "" : "s"}</p>
+                </div>
+            </article>
+        `).join("");
+            return;
+        }
+
+        const matches = recuerdosDemoData.albumDirectory.filter((album) =>
+            `${album.ownerName} ${album.title} ${album.note}`.toLowerCase().includes(normalizedQuery)
+        );
+
+        refreshedSummaryElement.textContent = matches.length
+            ? `${matches.length} álbum${matches.length === 1 ? "" : "es"} encontrado${matches.length === 1 ? "" : "s"}`
+            : "No hay resultados para esa búsqueda.";
+
+        refreshedGridElement.innerHTML = matches.map((album) => `
+            <article class="guest-album-item ${album.accent}">
+                <span class="guest-album-initials" aria-hidden="true">${escapeHTML(album.initials)}</span>
+                <div class="guest-album-copy">
+                    <p class="guest-album-owner">${escapeHTML(album.ownerName)}</p>
+                    <h4 class="guest-album-title">${escapeHTML(album.title)}</h4>
+                    <p class="guest-album-meta">${album.photoCount} recuerdo${album.photoCount === 1 ? "" : "s"} disponibles</p>
+                    <p class="guest-album-note">${escapeHTML(album.note)}</p>
+                </div>
+            </article>
+        `).join("");
     };
 
-    applySlide(0);
-
-    if (window.recuerdosPresentationTimer) {
-        window.clearInterval(window.recuerdosPresentationTimer);
+    if (refreshedSearchInput) {
+        refreshedSearchInput.oninput = (event) => renderDirectory(event.target.value);
+        renderDirectory(refreshedSearchInput.value);
     }
 
-    let currentSlideIndex = 0;
-    window.recuerdosPresentationTimer = window.setInterval(() => {
-        currentSlideIndex = (currentSlideIndex + 1) % recuerdosConfig.presentationSlides.length;
-        applySlide(currentSlideIndex);
-    }, 4500);
+    if (profile && profile.type === "guest" && profile.name) {
+        ensurePersonalAlbum(profile.name);
+    }
 }
 
 function renderAll() {
     updateLandingContent();
-    renderGuestAlbumsGrid();
-    renderPersonalAlbumPreview();
-    renderOfficialAlbumPreview();
-    renderMessageBoard();
-    renderPresentation();
+    renderOfficialPhotosSection();
+    renderMessageBoardSection();
+    renderPresentationSection();
+    renderAlbumsSection();
 }
 
-function initializeToastInteractions() {
-    const photosButton = document.getElementById("personal-upload-photos-btn");
-    const videoButton = document.getElementById("personal-upload-video-btn");
+function showToast(message, variant = "default") {
+    const toastContainer = document.getElementById("toast-container");
 
-    if (photosButton) {
-        photosButton.addEventListener("click", () => {
-            simulatePersonalUpload("Fotos");
-        });
+    if (!toastContainer) {
+        return;
     }
 
-    if (videoButton) {
-        videoButton.addEventListener("click", () => {
-            simulatePersonalUpload("Video");
-        });
-    }
+    const toast = document.createElement("div");
+    const toastIconClass = variant === "success"
+        ? "fa-solid fa-circle-check"
+        : variant === "error"
+            ? "fa-solid fa-triangle-exclamation"
+            : "fa-solid fa-circle-info";
+
+    toast.className = "toast" + (variant === "success" ? " toast-success" : variant === "error" ? " toast-error" : "");
+    toast.innerHTML = `
+        <i class="${toastIconClass} toast-icon" aria-hidden="true"></i>
+        <span class="toast-message">${escapeHTML(message)}</span>
+    `;
+
+    toastContainer.appendChild(toast);
+
+    window.setTimeout(() => {
+        toast.classList.add("hide");
+        window.setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 400);
+    }, 3000);
 }
 
 function simulatePersonalUpload(label) {
@@ -654,8 +849,8 @@ function simulatePersonalUpload(label) {
                 appendMockPersonalMedia(label);
                 progressElement.hidden = true;
                 showToast(label === "Video"
-                    ? "Video listo: el flujo de carga quedó preparado."
-                    : "Fotos listas: la carga simulada quedó completa.", "success");
+                    ? "Video listo: tu recuerdo quedó guardado."
+                    : "Fotos listas: tus recuerdos quedaron guardados.", "success");
             }, 300);
         }
     }, 120);
@@ -684,28 +879,57 @@ function appendMockPersonalMedia(label) {
 
         album.video = {
             title: "Video único",
-            meta: "Guardado localmente como vista previa"
+            meta: "Guardado en tu álbum"
         };
     } else {
         const photoIndex = (album.photos ? album.photos.length : 0) + 1;
         album.photos = album.photos || [];
         album.photos.push({
             title: "Foto " + photoIndex,
-            meta: "Guardada localmente como vista previa"
+            meta: "Guardada en tu álbum"
         });
         album.visible = true;
     }
 
     const updatedAlbums = albums.map((item) => item.id === album.id ? album : item);
     saveAlbums(updatedAlbums);
-    renderGuestAlbumsGrid();
-    renderPersonalAlbumPreview();
+    renderAlbumsSection();
+}
+
+function updateLandingContent() {
+    const greetingElement = document.getElementById("recuerdos-greeting");
+    const welcomeTextElement = document.getElementById("recuerdos-welcome-text");
+    const profile = getStoredAccessProfile();
+
+    if (!greetingElement || !welcomeTextElement) {
+        return;
+    }
+
+    if (profile && profile.type === "guest" && profile.name) {
+        document.title = "Centro de Recuerdos - " + profile.name;
+        greetingElement.textContent = "Hola, " + profile.name + " ❤️";
+        welcomeTextElement.textContent = "Tu identidad quedó guardada en este dispositivo. Desde acá podés recorrer cada parte del Centro de Recuerdos.";
+        ensurePersonalAlbum(profile.name);
+        return;
+    }
+
+    if (profile && profile.type === "admin") {
+        document.title = "Centro de Recuerdos";
+        greetingElement.textContent = "Bienvenido al Centro de Recuerdos";
+        welcomeTextElement.textContent = "Accediste con permisos de administración para acompañar y curar los recuerdos del evento.";
+        return;
+    }
+
+    document.title = "Centro de Recuerdos";
+    greetingElement.textContent = "Bienvenido al Centro de Recuerdos";
+    welcomeTextElement.textContent = "No hay una sesión activa. Volvé a la invitación para ingresar como invitado o administrador.";
 }
 
 function handleChangeUser() {
     clearAccessProfile();
     showAccessWelcome(null);
     openAccessModal();
+    renderAll();
 }
 
 function handleGuestAccess(event) {
@@ -730,6 +954,7 @@ function handleGuestAccess(event) {
     localStorage.setItem(accessStorageKey, JSON.stringify(profile));
     ensurePersonalAlbum(profile.name);
     updateLandingContent();
+    renderAll();
     showAccessSuccess(profile);
 }
 
@@ -751,6 +976,7 @@ function handleAdminAccess(event) {
 
     localStorage.setItem(accessStorageKey, JSON.stringify(profile));
     updateLandingContent();
+    renderAll();
     closeAccessModal();
 }
 
@@ -812,28 +1038,40 @@ function initializeAccessFlow() {
     openAccessModal();
 }
 
-function syncHashNavigation() {
-    if (!location.hash) {
-        return;
+function initializeToastInteractions() {
+    const photosButton = document.getElementById("personal-upload-photos-btn");
+    const videoButton = document.getElementById("personal-upload-video-btn");
+    const messageButton = document.getElementById("message-composer-btn");
+
+    if (photosButton) {
+        photosButton.addEventListener("click", () => {
+            simulatePersonalUpload("Fotos");
+        });
     }
 
-    const target = document.querySelector(location.hash);
+    if (videoButton) {
+        videoButton.addEventListener("click", () => {
+            simulatePersonalUpload("Video");
+        });
+    }
 
-    if (target) {
-        window.requestAnimationFrame(() => {
-            target.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (messageButton) {
+        messageButton.addEventListener("click", () => {
+            const input = document.getElementById("message-composer-input");
+
+            if (input && input.value.trim()) {
+                showToast("Tu saludo quedó listo.", "success");
+                input.value = "";
+                return;
+            }
+
+            showToast("Escribí un mensaje para dejar tu saludo.", "default");
         });
     }
 }
 
-const changeUserBtn = document.getElementById("change-user-btn");
-if (changeUserBtn) {
-    changeUserBtn.addEventListener("click", handleChangeUser);
-}
-
+renderRecuerdosAppShell();
+renderAccessModalShell();
 initializeAccessFlow();
 initializeToastInteractions();
 renderAll();
-syncHashNavigation();
-
-window.addEventListener("hashchange", syncHashNavigation);
