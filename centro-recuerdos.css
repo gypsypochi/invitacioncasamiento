@@ -165,6 +165,70 @@ body.centro-recuerdos-page::before {
     display: none;
 }
 
+.official-album-shell {
+    width: 100%;
+    max-width: 52rem;
+    margin: 0 auto;
+}
+
+.official-gallery-shell {
+    width: 100%;
+    display: grid;
+    justify-items: center;
+    gap: 1rem;
+}
+
+.official-gallery-main {
+    width: min(100%, 44rem);
+    aspect-ratio: 16 / 10;
+    padding: 0;
+    border: 0;
+    border-radius: 1.25rem;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 1rem 2.2rem rgba(91, 81, 96, 0.12);
+}
+
+.official-gallery-main-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.official-gallery-thumbs {
+    width: min(100%, 44rem);
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+.official-gallery-thumb {
+    flex: 0 0 4.35rem;
+    width: 4.35rem;
+    height: 4.35rem;
+    padding: 0;
+    border-radius: 0.9rem;
+    overflow: hidden;
+    border: 0.0625rem solid rgba(197, 160, 89, 0.18);
+    background: rgba(255, 255, 255, 0.14);
+    opacity: 0.88;
+}
+
+.official-gallery-thumb.is-active {
+    border-color: var(--color-dorado);
+    box-shadow: 0 0 0 0.18rem rgba(197, 160, 89, 0.14);
+    opacity: 1;
+}
+
+.official-gallery-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 .recuerdos-center-section {
     text-align: center;
 }
@@ -1492,4 +1556,79 @@ body.modal-open {
         min-width: auto;
         width: 100%;
     }
+}
+
+.media-upload-progress {
+    width: 100%;
+    display: grid;
+    gap: 0.45rem;
+    padding: 0.78rem 0.9rem;
+    border-radius: 18px;
+    border: 0.0625rem solid rgba(197, 160, 89, 0.18);
+    background: rgba(255, 255, 255, 0.72);
+    box-shadow: 0 0.45rem 1rem rgba(0, 0, 0, 0.04);
+}
+
+.media-upload-progress-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+    color: #5b5160;
+    font-size: 0.82rem;
+}
+
+.media-upload-progress-label {
+    font-weight: 600;
+}
+
+.media-upload-progress-meta {
+    font-style: italic;
+}
+
+.media-upload-progress-track {
+    width: 100%;
+    height: 0.42rem;
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(197, 160, 89, 0.12);
+}
+
+.media-upload-progress-bar {
+    display: block;
+    width: 0%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--color-dorado), rgba(197, 161, 230, 0.9));
+    transition: width 0.2s ease;
+}
+
+.media-upload-progress-file {
+    color: #6a6074;
+    font-size: 0.8rem;
+    font-style: italic;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.guest-album-limit-note {
+    margin: 0.15rem 0 0;
+    color: #7a5c22;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+.guest-upload-actions .btn-rectangular:disabled {
+    opacity: 0.48;
+    cursor: not-allowed;
+}
+
+.official-upload-progress {
+    margin-top: 0.35rem;
+}
+
+.guest-upload-progress {
+    margin-top: 0.35rem;
 }
