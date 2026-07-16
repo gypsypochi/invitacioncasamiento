@@ -119,8 +119,47 @@ const accessStorageKey = "centroRecuerdosAccess";
 const albumStorageKey = "centroRecuerdosAlbums";
 const wallStorageKey = "centroRecuerdosWallMessages";
 
+const officialAlbumSeed = [
+    {
+        id: "official-seed-1",
+        title: "Ceremonia",
+        alt: "Marcela y Jorge durante la ceremonia",
+        src: "assets/album-oficial/official-1.jpg",
+        fallbackSrc: "assets/img-1.png"
+    },
+    {
+        id: "official-seed-2",
+        title: "Miradas",
+        alt: "Un momento emotivo compartido por los novios",
+        src: "assets/album-oficial/official-2.jpg",
+        fallbackSrc: "assets/img-2.png"
+    },
+    {
+        id: "official-seed-3",
+        title: "Celebración",
+        alt: "La celebración del casamiento",
+        src: "assets/album-oficial/official-3.jpg",
+        fallbackSrc: "assets/img-3.png"
+    },
+    {
+        id: "official-seed-4",
+        title: "Fiesta",
+        alt: "Una imagen de la fiesta y el baile",
+        src: "assets/album-oficial/official-4.jpg",
+        fallbackSrc: "assets/img-4.png"
+    }
+];
+
 const recuerdosAppState = {
-    messageColor: "rose"
+    messageColor: "rose",
+    officialAlbum: {
+        initialized: false,
+        seedItems: [],
+        uploadedItems: [],
+        activeIndex: 0,
+        lightboxIndex: null,
+        adminPanelOpen: false
+    }
 };
 
 function escapeHTML(value) {
@@ -130,6 +169,82 @@ function escapeHTML(value) {
         .replaceAll(">", "&gt;")
         .replaceAll("\"", "&quot;")
         .replaceAll("'", "&#39;");
+}
+
+function renderAlbumsSection() {
+    const section = document.getElementById("albums-section");
+    const activeElement = document.activeElement;
+    const shouldRestoreSearchFocus = Boolean(activeElement && activeElement.id === "guest-album-search");
+    const searchSelection = shouldRestoreSearchFocus
+        ? {
+            value: activeElement.value,
+            start: activeElement.selectionStart,
+            end: activeElement.selectionEnd,
+            direction: activeElement.selectionDirection
+        }
+        : null;
+    const previousScrollY = window.scrollY;
+
+    if (!section) {
+        return;
+    }
+
+    const profile = getStoredAccessProfile();
+    const isGuest = profile && profile.type === "guest" && profile.name;
+
+    section.className = "section bg-lavanda recuerdos-center-section";
+
+    if (isGuest) {
+        section.innerHTML = renderGuestCenterSection(profile);
+        renderGuestPersonalAlbumPreview();
+        bindGuestAlbumInteractions();
+
+        if (shouldRestoreSearchFocus) {
+            const nextSearchInput = document.getElementById("guest-album-search");
+
+            if (nextSearchInput) {
+                nextSearchInput.focus({ preventScroll: true });
+
+                if (searchSelection) {
+                    const selectionStart = typeof searchSelection.start === "number" ? searchSelection.start : searchSelection.value.length;
+                    const selectionEnd = typeof searchSelection.end === "number" ? searchSelection.end : searchSelection.value.length;
+
+                    try {
+                        nextSearchInput.setSelectionRange(selectionStart, selectionEnd, searchSelection.direction || "none");
+                    } catch (error) {
+                        nextSearchInput.setSelectionRange(selectionStart, selectionEnd);
+                    }
+                }
+            }
+
+            window.scrollTo({ top: previousScrollY, left: 0, behavior: "auto" });
+        }
+        return;
+    }
+
+    section.innerHTML = renderAdminCenterSection();
+    bindAdminAlbumInteractions();
+
+    if (shouldRestoreSearchFocus) {
+        const nextSearchInput = document.getElementById("guest-album-search");
+
+        if (nextSearchInput) {
+            nextSearchInput.focus({ preventScroll: true });
+
+            if (searchSelection) {
+                const selectionStart = typeof searchSelection.start === "number" ? searchSelection.start : searchSelection.value.length;
+                const selectionEnd = typeof searchSelection.end === "number" ? searchSelection.end : searchSelection.value.length;
+
+                try {
+                    nextSearchInput.setSelectionRange(selectionStart, selectionEnd, searchSelection.direction || "none");
+                } catch (error) {
+                    nextSearchInput.setSelectionRange(selectionStart, selectionEnd);
+                }
+            }
+        }
+
+        window.scrollTo({ top: previousScrollY, left: 0, behavior: "auto" });
+    }
 }
 
 function initialsFromName(name) {
@@ -176,6 +291,501 @@ function getStoredAlbums() {
 
 function saveAlbums(albums) {
     localStorage.setItem(albumStorageKey, JSON.stringify(albums));
+}
+
+function createOfficialAlbumItem(source, origin = "seed") {
+    const title = source.title || "Fotografía oficial";
+
+    return {
+        id: source.id || `${origin}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        title,
+        alt: source.alt || title,
+        src: source.src,
+        fallbackSrc: source.fallbackSrc || source.src,
+        origin,
+        fileName: source.fileName || null,
+        objectUrl: source.objectUrl || null,
+        createdAt: source.createdAt || new Date().toISOString()
+    };
+}
+
+function initializeOfficialAlbumState() {
+    const officialAlbumState = recuerdosAppState.officialAlbum;
+
+    if (officialAlbumState.initialized) {
+        return;
+    }
+
+    officialAlbumState.seedItems = officialAlbumSeed.map((item) => createOfficialAlbumItem(item, "seed"));
+    officialAlbumState.uploadedItems = [];
+    officialAlbumState.initialized = true;
+}
+
+function getOfficialAlbumVisibleItems(profile = getStoredAccessProfile()) {
+    initializeOfficialAlbumState();
+
+    const officialAlbumState = recuerdosAppState.officialAlbum;
+    const isAdmin = profile && profile.type === "admin";
+
+    return isAdmin
+        ? officialAlbumState.seedItems.concat(officialAlbumState.uploadedItems)
+        : officialAlbumState.uploadedItems.slice();
+}
+
+function getOfficialAlbumActiveIndex(profile = getStoredAccessProfile()) {
+    const officialAlbumState = recuerdosAppState.officialAlbum;
+    const items = getOfficialAlbumVisibleItems(profile);
+
+    if (!items.length) {
+        officialAlbumState.activeIndex = 0;
+        return 0;
+    }
+
+    if (officialAlbumState.activeIndex >= items.length) {
+        officialAlbumState.activeIndex = items.length - 1;
+    }
+
+    if (officialAlbumState.activeIndex < 0) {
+        officialAlbumState.activeIndex = 0;
+    }
+
+    return officialAlbumState.activeIndex;
+}
+
+function syncOfficialAlbumBodyLock() {
+    const accessModal = document.getElementById("access-modal");
+    const isAccessModalOpen = accessModal && !accessModal.hidden;
+    const isLightboxOpen = recuerdosAppState.officialAlbum.lightboxIndex !== null;
+
+    document.body.classList.toggle("modal-open", isAccessModalOpen || isLightboxOpen);
+}
+
+function renderOfficialAlbumEmptyState() {
+    return `
+        <div class="official-album-empty-state">
+            <div class="album-empty-icon" aria-hidden="true">
+                <i class="fa-solid fa-camera"></i>
+            </div>
+            <h3>Las fotografías oficiales estarán disponibles luego del casamiento.</h3>
+            <p>Esta galería se completa con imágenes locales de prueba hasta que llegue la siguiente etapa.</p>
+        </div>
+    `;
+}
+
+function renderOfficialAlbumGallery(items, activeIndex) {
+    const activeItem = items[activeIndex] || items[0];
+
+    if (!activeItem) {
+        return "";
+    }
+
+    return `
+        <div class="official-gallery-shell">
+            <button class="official-gallery-main" type="button" data-official-action="open-lightbox" aria-label="Abrir fotografía principal">
+                <img
+                    src="${escapeHTML(activeItem.src)}"
+                    alt="${escapeHTML(activeItem.alt)}"
+                    class="official-gallery-main-image"
+                    data-fallback-src="${escapeHTML(activeItem.fallbackSrc)}"
+                >
+            </button>
+
+            <div class="official-gallery-thumbs" role="tablist" aria-label="Miniaturas del álbum oficial">
+                ${items.map((item, index) => `
+                    <button
+                        class="official-gallery-thumb${index === activeIndex ? " is-active" : ""}"
+                        type="button"
+                        data-official-action="select"
+                        data-official-index="${index}"
+                        aria-label="Ver ${escapeHTML(item.title)}"
+                        aria-pressed="${index === activeIndex ? "true" : "false"}"
+                    >
+                        <img
+                            src="${escapeHTML(item.src)}"
+                            alt="${escapeHTML(item.alt)}"
+                            data-fallback-src="${escapeHTML(item.fallbackSrc)}"
+                        >
+                    </button>
+                `).join("")}
+            </div>
+        </div>
+    `;
+}
+
+function renderOfficialAlbumAdminPanel(items, isOpen) {
+    return `
+        <div class="official-admin-panel${isOpen ? " is-open" : ""}"${isOpen ? "" : " hidden"}>
+            <div class="official-admin-panel-head">
+                <h3>Administrar fotografías</h3>
+                <p>Por ahora solo podés eliminar fotografías existentes para probar el flujo.</p>
+            </div>
+
+            ${items.length ? `
+                <div class="official-admin-grid">
+                    ${items.map((item, index) => `
+                        <article class="official-admin-card">
+                            <div class="official-admin-thumb">
+                                <img
+                                    src="${escapeHTML(item.src)}"
+                                    alt="${escapeHTML(item.alt)}"
+                                    data-fallback-src="${escapeHTML(item.fallbackSrc)}"
+                                >
+                            </div>
+                            <div class="official-admin-copy">
+                                <button class="btn-rectangular btn-secundario official-admin-delete-btn" type="button" data-official-action="delete" data-official-index="${index}">Eliminar</button>
+                            </div>
+                        </article>
+                    `).join("")}
+                </div>
+            ` : `
+                <div class="official-admin-empty">
+                    <p>No hay fotografías para eliminar todavía.</p>
+                </div>
+            `}
+        </div>
+    `;
+}
+
+function renderOfficialAlbumLightbox(items, activeIndex) {
+    const activeItem = items[activeIndex];
+
+    if (!activeItem) {
+        return "";
+    }
+
+    return `
+        <div class="official-lightbox" id="official-lightbox" role="dialog" aria-modal="true" aria-label="Visor de fotografías oficiales">
+            <div class="official-lightbox-backdrop" data-official-action="close"></div>
+            <div class="official-lightbox-panel">
+                <button class="official-lightbox-close" type="button" data-official-action="close" aria-label="Cerrar visor">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+                <button class="official-lightbox-nav official-lightbox-prev" type="button" data-official-action="prev" aria-label="Fotografía anterior">
+                    <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+                </button>
+                <button class="official-lightbox-nav official-lightbox-next" type="button" data-official-action="next" aria-label="Fotografía siguiente">
+                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                </button>
+                <figure class="official-lightbox-figure">
+                    <img
+                        src="${escapeHTML(activeItem.src)}"
+                        alt="${escapeHTML(activeItem.alt)}"
+                        class="official-lightbox-image"
+                        data-fallback-src="${escapeHTML(activeItem.fallbackSrc)}"
+                    >
+                </figure>
+            </div>
+        </div>
+    `;
+}
+
+function normalizeOfficialAlbumFileName(fileName) {
+    return String(fileName || "fotografia")
+        .replace(/\.[^.]+$/, "")
+        .replace(/[-_]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function createOfficialAlbumUploadItem(file) {
+    const objectUrl = window.URL.createObjectURL(file);
+    const title = normalizeOfficialAlbumFileName(file.name);
+
+    return {
+        id: `official-upload-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        title: title || "Fotografía nueva",
+        alt: title || "Fotografía nueva",
+        src: objectUrl,
+        fallbackSrc: objectUrl,
+        origin: "upload",
+        fileName: file.name,
+        objectUrl,
+        createdAt: new Date().toISOString()
+    };
+}
+
+function setOfficialAlbumActiveIndex(index) {
+    const officialAlbumState = recuerdosAppState.officialAlbum;
+    const items = getOfficialAlbumVisibleItems();
+
+    if (!items.length) {
+        officialAlbumState.activeIndex = 0;
+        return;
+    }
+
+    const nextIndex = Math.max(0, Math.min(index, items.length - 1));
+    officialAlbumState.activeIndex = nextIndex;
+    renderOfficialPhotosSection();
+}
+
+function openOfficialAlbumLightbox(index) {
+    const officialAlbumState = recuerdosAppState.officialAlbum;
+    const items = getOfficialAlbumVisibleItems();
+
+    if (!items.length) {
+        return;
+    }
+
+    officialAlbumState.lightboxIndex = Math.max(0, Math.min(index, items.length - 1));
+    officialAlbumState.activeIndex = officialAlbumState.lightboxIndex;
+    renderOfficialPhotosSection();
+    syncOfficialAlbumBodyLock();
+    document.removeEventListener("keydown", handleOfficialAlbumKeydown);
+    document.addEventListener("keydown", handleOfficialAlbumKeydown);
+}
+
+function closeOfficialAlbumLightbox() {
+    const officialAlbumState = recuerdosAppState.officialAlbum;
+
+    if (officialAlbumState.lightboxIndex === null) {
+        return;
+    }
+
+    officialAlbumState.lightboxIndex = null;
+    renderOfficialPhotosSection();
+    document.removeEventListener("keydown", handleOfficialAlbumKeydown);
+    syncOfficialAlbumBodyLock();
+}
+
+function moveOfficialAlbumLightbox(step) {
+    const officialAlbumState = recuerdosAppState.officialAlbum;
+    const items = getOfficialAlbumVisibleItems();
+
+    if (!items.length || officialAlbumState.lightboxIndex === null) {
+        return;
+    }
+
+    const nextIndex = (officialAlbumState.lightboxIndex + step + items.length) % items.length;
+    officialAlbumState.lightboxIndex = nextIndex;
+    officialAlbumState.activeIndex = nextIndex;
+    renderOfficialPhotosSection();
+    syncOfficialAlbumBodyLock();
+}
+
+function handleOfficialAlbumKeydown(event) {
+    const officialAlbumState = recuerdosAppState.officialAlbum;
+
+    if (officialAlbumState.lightboxIndex === null) {
+        return;
+    }
+
+    if (event.key === "Escape") {
+        closeOfficialAlbumLightbox();
+        return;
+    }
+
+    if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        moveOfficialAlbumLightbox(-1);
+        return;
+    }
+
+    if (event.key === "ArrowRight") {
+        event.preventDefault();
+        moveOfficialAlbumLightbox(1);
+    }
+}
+
+function addOfficialAlbumFiles(files) {
+    const imageFiles = Array.from(files || []).filter((file) => file && file.type && file.type.startsWith("image/"));
+
+    if (!imageFiles.length) {
+        showToast("Seleccioná al menos una imagen.", "default");
+        return;
+    }
+
+    initializeOfficialAlbumState();
+
+    const officialAlbumState = recuerdosAppState.officialAlbum;
+    const nextItems = imageFiles.map(createOfficialAlbumUploadItem);
+
+    officialAlbumState.uploadedItems = officialAlbumState.uploadedItems.concat(nextItems);
+
+    renderOfficialPhotosSection();
+    showToast(`${imageFiles.length} fotografía${imageFiles.length === 1 ? "" : "s"} agregada${imageFiles.length === 1 ? "" : "s"} a la galería.`, "success");
+}
+
+function deleteOfficialAlbumItem(index) {
+    const officialAlbumState = recuerdosAppState.officialAlbum;
+    const profile = getStoredAccessProfile();
+    const items = getOfficialAlbumVisibleItems(profile);
+    const targetItem = items[index];
+
+    if (!targetItem) {
+        return;
+    }
+
+    if (!window.confirm("¿Querés eliminar esta fotografía de la galería?")) {
+        return;
+    }
+
+    if (targetItem.origin === "upload" && targetItem.objectUrl) {
+        window.URL.revokeObjectURL(targetItem.objectUrl);
+    }
+
+    if (targetItem.origin === "seed") {
+        officialAlbumState.seedItems = officialAlbumState.seedItems.filter((item) => item.id !== targetItem.id);
+    } else {
+        officialAlbumState.uploadedItems = officialAlbumState.uploadedItems.filter((item) => item.id !== targetItem.id);
+    }
+
+    const nextItems = getOfficialAlbumVisibleItems(profile);
+
+    if (!nextItems.length) {
+        officialAlbumState.activeIndex = 0;
+        officialAlbumState.lightboxIndex = null;
+        officialAlbumState.adminPanelOpen = false;
+        document.removeEventListener("keydown", handleOfficialAlbumKeydown);
+        renderOfficialPhotosSection();
+        syncOfficialAlbumBodyLock();
+        return;
+    }
+
+    if (officialAlbumState.activeIndex >= nextItems.length) {
+        officialAlbumState.activeIndex = nextItems.length - 1;
+    }
+
+    if (officialAlbumState.lightboxIndex !== null) {
+        if (officialAlbumState.lightboxIndex === index) {
+            officialAlbumState.lightboxIndex = Math.min(index, nextItems.length - 1);
+        } else if (officialAlbumState.lightboxIndex > index) {
+            officialAlbumState.lightboxIndex -= 1;
+        }
+    }
+
+    renderOfficialPhotosSection();
+    syncOfficialAlbumBodyLock();
+}
+
+function toggleOfficialAlbumAdminPanel() {
+    const officialAlbumState = recuerdosAppState.officialAlbum;
+    officialAlbumState.adminPanelOpen = !officialAlbumState.adminPanelOpen;
+    renderOfficialPhotosSection();
+}
+
+function initializeOfficialAlbumInteractions() {
+    const uploadButton = document.querySelector('[data-official-action="upload"]');
+    const manageButtons = document.querySelectorAll('[data-official-action="manage"]');
+    const fileInput = document.getElementById("official-photos-input");
+    const galleryMain = document.querySelector('[data-official-action="open-lightbox"]');
+    const thumbButtons = document.querySelectorAll('[data-official-action="select"]');
+    const adminDeleteButtons = document.querySelectorAll('[data-official-action="delete"]');
+    const lightbox = document.getElementById("official-lightbox");
+    const closeButtons = document.querySelectorAll('[data-official-action="close"]');
+    const prevButtons = document.querySelectorAll('[data-official-action="prev"]');
+    const nextButtons = document.querySelectorAll('[data-official-action="next"]');
+
+    if (uploadButton && fileInput) {
+        uploadButton.addEventListener("click", () => fileInput.click());
+    }
+
+    if (fileInput) {
+        fileInput.addEventListener("change", (event) => {
+            addOfficialAlbumFiles(event.target.files);
+            event.target.value = "";
+        });
+    }
+
+    manageButtons.forEach((button) => {
+        button.addEventListener("click", toggleOfficialAlbumAdminPanel);
+    });
+
+    if (galleryMain) {
+        galleryMain.addEventListener("click", () => openOfficialAlbumLightbox(getOfficialAlbumActiveIndex()));
+    }
+
+    thumbButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            const index = Number(button.dataset.officialIndex);
+            if (!Number.isNaN(index)) {
+                setOfficialAlbumActiveIndex(index);
+            }
+        });
+    });
+
+    adminDeleteButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            const index = Number(button.dataset.officialIndex);
+            if (!Number.isNaN(index)) {
+                deleteOfficialAlbumItem(index);
+            }
+        });
+    });
+
+    closeButtons.forEach((button) => {
+        button.addEventListener("click", closeOfficialAlbumLightbox);
+    });
+
+    prevButtons.forEach((button) => {
+        button.addEventListener("click", () => moveOfficialAlbumLightbox(-1));
+    });
+
+    nextButtons.forEach((button) => {
+        button.addEventListener("click", () => moveOfficialAlbumLightbox(1));
+    });
+
+    if (lightbox) {
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        lightbox.addEventListener("click", (event) => {
+            if (event.target && event.target.classList && event.target.classList.contains("official-lightbox-backdrop")) {
+                closeOfficialAlbumLightbox();
+            }
+        });
+
+        lightbox.addEventListener("touchstart", (event) => {
+            const touch = event.touches[0];
+
+            if (!touch) {
+                return;
+            }
+
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+        }, { passive: true });
+
+        lightbox.addEventListener("touchend", (event) => {
+            const touch = event.changedTouches[0];
+
+            if (!touch) {
+                return;
+            }
+
+            const deltaX = touch.clientX - touchStartX;
+            const deltaY = touch.clientY - touchStartY;
+
+            if (Math.abs(deltaX) > 42 && Math.abs(deltaX) > Math.abs(deltaY)) {
+                if (deltaX < 0) {
+                    moveOfficialAlbumLightbox(1);
+                } else {
+                    moveOfficialAlbumLightbox(-1);
+                }
+            }
+        }, { passive: true });
+    }
+}
+
+function applyOfficialAlbumImageFallbacks(root = document) {
+    const images = root.querySelectorAll("img[data-fallback-src]");
+
+    images.forEach((image) => {
+        if (image.dataset.fallbackBound === "true") {
+            return;
+        }
+
+        image.dataset.fallbackBound = "true";
+        image.addEventListener("error", () => {
+            const fallbackSrc = image.dataset.fallbackSrc;
+
+            if (!fallbackSrc || image.dataset.fallbackApplied === "true") {
+                return;
+            }
+
+            image.dataset.fallbackApplied = "true";
+            image.src = fallbackSrc;
+        });
+    });
 }
 
 function getWallSessionKey(profile = getStoredAccessProfile()) {
@@ -265,26 +875,51 @@ function formatWallTimestamp(isoDate) {
 
 function ensurePersonalAlbum(guestName) {
     const normalizedName = guestName.trim();
-    const albums = getStoredAlbums();
-    const existingAlbum = albums.find((album) => album.type === "guest" && album.ownerName === normalizedName);
+    const profile = getStoredAccessProfile();
+    const albums = getStoredAlbums().map((album) => normalizeGuestAlbumRecord(album));
+    let existingAlbum = null;
+
+    if (profile && profile.type === "guest" && profile.albumId) {
+        existingAlbum = albums.find((album) => album.id === profile.albumId) || null;
+    }
+
+    if (!existingAlbum) {
+        existingAlbum = albums.find((album) => album.ownerType === "guest" && album.ownerName === normalizedName) || null;
+    }
 
     if (existingAlbum) {
+        if (profile && profile.type === "guest" && profile.albumId !== existingAlbum.id) {
+            const nextProfile = {
+                ...profile,
+                albumId: existingAlbum.id
+            };
+            localStorage.setItem(accessStorageKey, JSON.stringify(nextProfile));
+        }
+
+        saveAlbums(albums.map((album) => normalizeGuestAlbumRecord(album)));
         return existingAlbum;
     }
 
-    const newAlbum = {
-        id: "guest-" + Date.now(),
-        type: "guest",
-        title: "Fotos de " + normalizedName,
+    const newAlbum = normalizeGuestAlbumRecord({
+        id: generateGuestAlbumId(),
         ownerName: normalizedName,
-        visible: false,
+        ownerType: "guest",
+        createdAt: new Date().toISOString(),
         photos: [],
-        video: null,
-        createdAt: new Date().toISOString()
-    };
+        video: null
+    });
 
     albums.push(newAlbum);
     saveAlbums(albums);
+
+    if (profile && profile.type === "guest") {
+        const nextProfile = {
+            ...profile,
+            albumId: newAlbum.id
+        };
+        localStorage.setItem(accessStorageKey, JSON.stringify(nextProfile));
+    }
+
     return newAlbum;
 }
 
@@ -539,20 +1174,43 @@ function renderOfficialPhotosSection() {
 
     const profile = getStoredAccessProfile();
     const isAdmin = profile && profile.type === "admin";
+    const officialAlbumState = recuerdosAppState.officialAlbum;
+    const items = getOfficialAlbumVisibleItems(profile);
+    const activeIndex = getOfficialAlbumActiveIndex(profile);
+    const hasOfficialPhotos = items.length > 0;
 
     section.className = "section bg-lavanda";
 
     section.innerHTML = `
         <i class="fa-solid fa-camera icon-evento" aria-hidden="true"></i>
         <h2>Álbum Oficial</h2>
-        <p class="official-photos-lead">Las fotografías oficiales del casamiento estarán disponibles muy pronto.</p>
-        <p class="official-photos-note">Los novios las publicarán cuando finalice el evento.</p>
+        <p class="official-photos-lead">${hasOfficialPhotos
+            ? "La galería oficial reúne fotografías locales de prueba para validar la experiencia del frontend."
+            : "Pronto se subirán las fotografías oficiales."}</p>
+        ${hasOfficialPhotos ? `
+            <p class="official-photos-note">Seleccioná una miniatura o abrí la fotografía principal para verla en detalle.</p>
+        ` : ""}
 
         <div class="official-photos-actions"${isAdmin ? "" : " hidden"}>
-            <button class="btn-rectangular" type="button">Subir fotografías</button>
-            <button class="btn-rectangular btn-secundario" type="button">Administrar fotografías</button>
+            <button class="btn-rectangular" type="button" data-official-action="upload">Subir fotografías</button>
+            <button class="btn-rectangular btn-secundario" type="button" data-official-action="manage">${officialAlbumState.adminPanelOpen ? "Cerrar administración" : "Administrar fotografías"}</button>
         </div>
+
+        <input id="official-photos-input" type="file" accept="image/*" multiple hidden>
+
+        <div class="official-album-shell">
+            ${hasOfficialPhotos
+                ? renderOfficialAlbumGallery(items, activeIndex)
+                : renderOfficialAlbumEmptyState()}
+        </div>
+
+        ${isAdmin ? renderOfficialAlbumAdminPanel(items, officialAlbumState.adminPanelOpen) : ""}
+        ${officialAlbumState.lightboxIndex !== null ? renderOfficialAlbumLightbox(items, officialAlbumState.lightboxIndex) : ""}
     `;
+
+    initializeOfficialAlbumInteractions();
+    applyOfficialAlbumImageFallbacks(section);
+    syncOfficialAlbumBodyLock();
 }
 
 function renderMessageBoardSection() {
@@ -703,134 +1361,6 @@ function renderPersonalAlbumPreview() {
     progressElement.hidden = true;
     progressBarElement.style.width = "0%";
     progressTextElement.textContent = "0%";
-}
-
-function renderAlbumsSection() {
-    const section = document.getElementById("albums-section");
-    const searchInput = document.getElementById("guest-album-search");
-    const summaryElement = document.getElementById("guest-albums-summary");
-    const gridElement = document.getElementById("guest-albums-grid");
-
-    if (!section) {
-        return;
-    }
-
-    section.innerHTML = `
-        <div class="recuerdos-section-copy">
-            <p class="recuerdos-section-kicker">Álbumes</p>
-            <h2>Mis Recuerdos y álbumes de invitados</h2>
-            <p>El espacio reúne tu álbum personal, el buscador y la lista de álbumes visibles para recorrer.</p>
-        </div>
-
-        <div class="albums-layout">
-            <article class="personal-album">
-                <div class="personal-album-header">
-                    <p class="recuerdos-section-kicker">Mis Recuerdos</p>
-                    <h3 id="personal-album-title">Mi álbum</h3>
-                    <p id="personal-album-description" class="personal-album-description">Tu espacio personal se completa con fotos y video cuando se conecta la persistencia.</p>
-                </div>
-
-                <div class="personal-album-actions" aria-label="Acciones del álbum personal">
-                    <button id="personal-upload-photos-btn" class="btn-rectangular" type="button"><i class="fa-solid fa-camera" aria-hidden="true" style="margin-right: 0.45rem;"></i>Subir fotografías</button>
-                    <button id="personal-upload-video-btn" class="btn-rectangular btn-secundario" type="button"><i class="fa-solid fa-video" aria-hidden="true" style="margin-right: 0.45rem;"></i>Subir video</button>
-                </div>
-
-                <div id="personal-upload-progress" class="personal-upload-progress" hidden aria-live="polite">
-                    <div class="personal-upload-progress-label">
-                        <span>Organizando tu recuerdo</span>
-                        <span id="personal-upload-progress-text">0%</span>
-                    </div>
-                    <div class="personal-upload-progress-track">
-                        <div id="personal-upload-progress-bar" class="personal-upload-progress-bar"></div>
-                    </div>
-                </div>
-
-                <div id="personal-album-empty-state" class="album-empty-state" hidden>
-                    <i class="fa-solid fa-photo-film album-empty-icon" aria-hidden="true"></i>
-                    <h3>Tu álbum está esperando recuerdos</h3>
-                    <p>Cuando haya contenido real, este bloque mostrará el material de tu sesión.</p>
-                </div>
-
-                <div id="personal-album-media-list" class="personal-album-media-list" aria-live="polite"></div>
-            </article>
-
-            <aside class="guest-albums">
-                <div class="guest-albums-header">
-                    <p class="recuerdos-section-kicker">Buscar invitados</p>
-                    <h3>Explorar álbumes</h3>
-                    <p>El listado se mantiene simple y ordenado.</p>
-                </div>
-
-                <label class="guest-search-field" for="guest-album-search">
-                    <span>Buscar por nombre</span>
-                    <input id="guest-album-search" type="search" autocomplete="off" placeholder="Escribí un nombre para explorar">
-                </label>
-
-                <div class="guest-albums-summary" id="guest-albums-summary">Todavía no se están mostrando álbumes de invitados.</div>
-                <div id="guest-albums-grid" class="guest-albums-grid" aria-live="polite"></div>
-            </aside>
-        </div>
-    `;
-
-    const refreshedSearchInput = document.getElementById("guest-album-search");
-    const refreshedSummaryElement = document.getElementById("guest-albums-summary");
-    const refreshedGridElement = document.getElementById("guest-albums-grid");
-    const profile = getStoredAccessProfile();
-
-    renderPersonalAlbumPreview();
-
-    const renderDirectory = (query) => {
-        if (!refreshedSummaryElement || !refreshedGridElement) {
-            return;
-        }
-
-        const normalizedQuery = query.trim().toLowerCase();
-
-        if (!normalizedQuery) {
-            const defaults = recuerdosDemoData.guestAlbumPreviewSeed;
-            refreshedSummaryElement.textContent = `${defaults.length} álbumes visibles para recorrer en esta sección.`;
-            refreshedGridElement.innerHTML = defaults.map((album) => `
-                <article class="guest-album-item ${album.accentClass}">
-                    <span class="guest-album-initials" aria-hidden="true">${escapeHTML(album.initials)}</span>
-                    <div class="guest-album-copy">
-                        <p class="guest-album-owner">${escapeHTML(album.ownerName)}</p>
-                        <h4 class="guest-album-title">${escapeHTML(album.title)}</h4>
-                    <p class="guest-album-meta">${album.photoCount} recuerdo${album.photoCount === 1 ? "" : "s"} compartido${album.photoCount === 1 ? "" : "s"}</p>
-                </div>
-            </article>
-        `).join("");
-            return;
-        }
-
-        const matches = recuerdosDemoData.albumDirectory.filter((album) =>
-            `${album.ownerName} ${album.title} ${album.note}`.toLowerCase().includes(normalizedQuery)
-        );
-
-        refreshedSummaryElement.textContent = matches.length
-            ? `${matches.length} álbum${matches.length === 1 ? "" : "es"} encontrado${matches.length === 1 ? "" : "s"}`
-            : "No hay resultados para esa búsqueda.";
-
-        refreshedGridElement.innerHTML = matches.map((album) => `
-            <article class="guest-album-item ${album.accent}">
-                <span class="guest-album-initials" aria-hidden="true">${escapeHTML(album.initials)}</span>
-                <div class="guest-album-copy">
-                    <p class="guest-album-owner">${escapeHTML(album.ownerName)}</p>
-                    <h4 class="guest-album-title">${escapeHTML(album.title)}</h4>
-                    <p class="guest-album-meta">${album.photoCount} recuerdo${album.photoCount === 1 ? "" : "s"} disponibles</p>
-                    <p class="guest-album-note">${escapeHTML(album.note)}</p>
-                </div>
-            </article>
-        `).join("");
-    };
-
-    if (refreshedSearchInput) {
-        refreshedSearchInput.oninput = (event) => renderDirectory(event.target.value);
-        renderDirectory(refreshedSearchInput.value);
-    }
-
-    if (profile && profile.type === "guest" && profile.name) {
-        ensurePersonalAlbum(profile.name);
-    }
 }
 
 function renderAll() {
@@ -1544,6 +2074,17 @@ function initializeToastInteractions() {
 
 function renderAlbumsSection() {
     const section = document.getElementById("albums-section");
+    const activeElement = document.activeElement;
+    const shouldRestoreSearchFocus = Boolean(activeElement && activeElement.id === "guest-album-search");
+    const searchSelection = shouldRestoreSearchFocus
+        ? {
+            value: activeElement.value,
+            start: activeElement.selectionStart,
+            end: activeElement.selectionEnd,
+            direction: activeElement.selectionDirection
+        }
+        : null;
+    const previousScrollY = window.scrollY;
 
     if (!section) {
         return;
@@ -1624,80 +2165,17 @@ function renderAlbumsSection() {
 
 function renderAlbumsSection() {
     const section = document.getElementById("albums-section");
-
-    if (!section) {
-        return;
-    }
-
-    const profile = getStoredAccessProfile();
-    const isGuest = profile && profile.type === "guest" && profile.name;
-    const guestName = isGuest ? profile.name : "";
-    const demoAlbums = ["Julieta", "Sofía", "Nicolás", "Camila", "Laura"];
-
-    section.className = "section bg-lavanda recuerdos-center-section";
-    section.innerHTML = `
-        <i class="fa-solid fa-folder-open icon-evento" aria-hidden="true"></i>
-        <h2>Centro de Recuerdos</h2>
-        <p class="center-section-intro">${isGuest
-            ? "Desde aquí podés subir tus recuerdos y recorrer los álbumes de los demás invitados."
-            : "Desde aquí podés administrar el contenido compartido por los invitados y revisar todos los álbumes."}</p>
-
-        ${isGuest ? `
-            <article class="center-my-album-card">
-                <i class="fa-solid fa-folder-open center-my-album-icon" aria-hidden="true"></i>
-                <h3 id="personal-album-title">Mi Álbum - ${escapeHTML(guestName)}</h3>
-                <div class="center-my-album-actions" aria-label="Acciones del álbum personal">
-                    <button id="personal-upload-photos-btn" class="btn-rectangular" type="button">Subir fotografías</button>
-                    <button id="personal-upload-video-btn" class="btn-rectangular btn-secundario" type="button">Subir video</button>
-                </div>
-            </article>
-        ` : ""}
-
-        <div class="center-explore">
-            <h3>Explorar Álbumes</h3>
-
-            <div class="center-explore-tools">
-                <label class="center-search-field" for="guest-album-search">
-                    <span>Buscar por nombre</span>
-                    <input id="guest-album-search" type="search" autocomplete="off" placeholder="Escribí un nombre">
-                </label>
-
-                <button class="btn-rectangular btn-secundario center-presentation-btn" type="button">Presentación</button>
-            </div>
-
-            <div id="guest-albums-grid" class="center-albums-grid" aria-live="polite"></div>
-
-            <button class="btn-rectangular btn-secundario center-more-btn" type="button">Ver más álbumes</button>
-        </div>
-    `;
-
-    const searchInput = document.getElementById("guest-album-search");
-    const gridElement = document.getElementById("guest-albums-grid");
-
-    const renderDirectory = (query) => {
-        if (!gridElement) {
-            return;
+    const activeElement = document.activeElement;
+    const shouldRestoreSearchFocus = Boolean(activeElement && activeElement.id === "guest-album-search");
+    const searchSelection = shouldRestoreSearchFocus
+        ? {
+            value: activeElement.value,
+            start: activeElement.selectionStart,
+            end: activeElement.selectionEnd,
+            direction: activeElement.selectionDirection
         }
-
-        const normalizedQuery = query.trim().toLowerCase();
-        const filteredAlbums = demoAlbums.filter((ownerName) => ownerName.toLowerCase().includes(normalizedQuery));
-
-        gridElement.innerHTML = filteredAlbums.map((ownerName) => `
-            <article class="center-album-item">
-                <i class="fa-solid fa-folder-open center-album-icon" aria-hidden="true"></i>
-                <h4 class="center-album-name">${escapeHTML(ownerName)}</h4>
-            </article>
-        `).join("");
-    };
-
-    if (searchInput) {
-        searchInput.oninput = (event) => renderDirectory(event.target.value);
-        renderDirectory(searchInput.value);
-    }
-}
-
-function renderAlbumsSection() {
-    const section = document.getElementById("albums-section");
+        : null;
+    const previousScrollY = window.scrollY;
 
     if (!section) {
         return;
@@ -1770,8 +2248,2012 @@ function renderAlbumsSection() {
     }
 }
 
+const guestAlbumsStorageKey = "centroRecuerdosGuestAlbumsV1";
+
+const guestAlbumSeedCatalog = [
+    {
+        id: "seed-familia",
+        ownerName: "Familia",
+        ownerType: "guest",
+        createdAt: "2026-07-16T00:00:00.000Z",
+        photos: [
+            { id: "seed-familia-1", name: "Familia 1", src: "assets/img-1.png", createdAt: "2026-07-16T00:00:00.000Z" },
+            { id: "seed-familia-2", name: "Familia 2", src: "assets/img-2.png", createdAt: "2026-07-16T00:01:00.000Z" }
+        ],
+        video: null
+    },
+    {
+        id: "seed-amigos",
+        ownerName: "Amigos",
+        ownerType: "guest",
+        createdAt: "2026-07-16T00:02:00.000Z",
+        photos: [
+            { id: "seed-amigos-1", name: "Amigos 1", src: "assets/img-3.png", createdAt: "2026-07-16T00:02:00.000Z" },
+            { id: "seed-amigos-2", name: "Amigos 2", src: "assets/img-4.png", createdAt: "2026-07-16T00:03:00.000Z" }
+        ],
+        video: null
+    },
+    {
+        id: "seed-bailando",
+        ownerName: "Bailando",
+        ownerType: "guest",
+        createdAt: "2026-07-16T00:04:00.000Z",
+        photos: [
+            { id: "seed-bailando-1", name: "Baile 1", src: "assets/img-4.png", createdAt: "2026-07-16T00:04:00.000Z" }
+        ],
+        video: null
+    },
+    {
+        id: "seed-mesa",
+        ownerName: "Mesa",
+        ownerType: "guest",
+        createdAt: "2026-07-16T00:05:00.000Z",
+        photos: [
+            { id: "seed-mesa-1", name: "Mesa 1", src: "assets/img-2.png", createdAt: "2026-07-16T00:05:00.000Z" },
+            { id: "seed-mesa-2", name: "Mesa 2", src: "assets/img-1.png", createdAt: "2026-07-16T00:06:00.000Z" }
+        ],
+        video: null
+    },
+    {
+        id: "seed-celebracion",
+        ownerName: "Celebración",
+        ownerType: "guest",
+        createdAt: "2026-07-16T00:07:00.000Z",
+        photos: [
+            { id: "seed-celebracion-1", name: "Celebración 1", src: "assets/img-3.png", createdAt: "2026-07-16T00:07:00.000Z" }
+        ],
+        video: null
+    },
+    {
+        id: "seed-brindis",
+        ownerName: "Brindis",
+        ownerType: "guest",
+        createdAt: "2026-07-16T00:08:00.000Z",
+        photos: [
+            { id: "seed-brindis-1", name: "Brindis 1", src: "assets/img-1.png", createdAt: "2026-07-16T00:08:00.000Z" }
+        ],
+        video: null
+    },
+    {
+        id: "seed-detalles",
+        ownerName: "Detalles",
+        ownerType: "guest",
+        createdAt: "2026-07-16T00:09:00.000Z",
+        photos: [
+            { id: "seed-detalles-1", name: "Detalles 1", src: "assets/img-2.png", createdAt: "2026-07-16T00:09:00.000Z" }
+        ],
+        video: null
+    },
+    {
+        id: "seed-entradas",
+        ownerName: "Entradas",
+        ownerType: "guest",
+        createdAt: "2026-07-16T00:10:00.000Z",
+        photos: [
+            { id: "seed-entradas-1", name: "Entrada 1", src: "assets/img-3.png", createdAt: "2026-07-16T00:10:00.000Z" },
+            { id: "seed-entradas-2", name: "Entrada 2", src: "assets/img-4.png", createdAt: "2026-07-16T00:11:00.000Z" }
+        ],
+        video: null
+    },
+    {
+        id: "seed-sonrisas",
+        ownerName: "Sonrisas",
+        ownerType: "guest",
+        createdAt: "2026-07-16T00:12:00.000Z",
+        photos: [
+            { id: "seed-sonrisas-1", name: "Sonrisa 1", src: "assets/img-4.png", createdAt: "2026-07-16T00:12:00.000Z" }
+        ],
+        video: null
+    },
+    {
+        id: "seed-recuerdos",
+        ownerName: "Recuerdos",
+        ownerType: "guest",
+        createdAt: "2026-07-16T00:13:00.000Z",
+        photos: [
+            { id: "seed-recuerdos-1", name: "Recuerdo 1", src: "assets/img-1.png", createdAt: "2026-07-16T00:13:00.000Z" },
+            { id: "seed-recuerdos-2", name: "Recuerdo 2", src: "assets/img-2.png", createdAt: "2026-07-16T00:14:00.000Z" }
+        ],
+        video: null
+    }
+];
+
+const guestCenterState = {
+    visibleCount: 5,
+    personalVisibleCount: 8,
+    albumsPage: 1,
+    personalPage: 1,
+    searchQuery: "",
+    viewer: {
+        open: false,
+        items: [],
+        index: 0,
+        title: ""
+    }
+};
+
+const adminCenterState = {
+    albumsPage: 1,
+    searchQuery: ""
+};
+
+function generateGuestId(prefix) {
+    if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        return `${prefix}-${window.crypto.randomUUID()}`;
+    }
+
+    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeGuestMediaItem(item, kind = "photo") {
+    if (!item) {
+        return null;
+    }
+
+    const mediaKind = item.kind || kind;
+
+    return {
+        id: item.id || generateGuestId("guest-media"),
+        kind: mediaKind,
+        name: item.name || (mediaKind === "video" ? "Video" : "Foto"),
+        src: item.src || "",
+        createdAt: item.createdAt || new Date().toISOString(),
+        fileName: item.fileName || item.name || "",
+        mimeType: item.mimeType || null,
+        objectUrl: item.objectUrl || item.src || null
+    };
+}
+
+function normalizeGuestAlbumRecord(album) {
+    if (!album) {
+        return null;
+    }
+
+    const photos = Array.isArray(album.photos)
+        ? album.photos.map((photo) => normalizeGuestMediaItem(photo, "photo")).filter(Boolean)
+        : [];
+
+    return {
+        id: album.id || generateGuestId("guest-album"),
+        ownerName: album.ownerName || "Invitado",
+        ownerType: album.ownerType || "guest",
+        createdAt: album.createdAt || new Date().toISOString(),
+        photos,
+        video: album.video ? normalizeGuestMediaItem(album.video, "video") : null
+    };
+}
+
+function getGuestPaginationWindow(items, page, pageSize) {
+    const totalItems = Array.isArray(items) ? items.length : 0;
+    const totalPages = Math.max(1, Math.ceil(Math.max(totalItems, 1) / pageSize));
+    const currentPage = Math.min(Math.max(1, page || 1), totalPages);
+    const startIndex = (currentPage - 1) * pageSize;
+
+    return {
+        currentPage,
+        totalPages,
+        totalItems,
+        items: (items || []).slice(startIndex, startIndex + pageSize),
+        startIndex
+    };
+}
+
+function getStoredGuestAlbums() {
+    const rawAlbums = localStorage.getItem(guestAlbumsStorageKey);
+
+    if (!rawAlbums) {
+        return [];
+    }
+
+    try {
+        return JSON.parse(rawAlbums).map((album) => normalizeGuestAlbumRecord(album)).filter(Boolean);
+    } catch (error) {
+        return [];
+    }
+}
+
+function saveStoredGuestAlbums(albums) {
+    localStorage.setItem(guestAlbumsStorageKey, JSON.stringify(albums.map((album) => normalizeGuestAlbumRecord(album)).filter(Boolean)));
+}
+
+function getGuestSeedAlbums() {
+    return guestAlbumSeedCatalog.map((album) => normalizeGuestAlbumRecord(album)).filter(Boolean);
+}
+
+function getCurrentGuestAlbum(profile = getStoredAccessProfile()) {
+    if (!profile || profile.type !== "guest" || !profile.name) {
+        return null;
+    }
+
+    const storedAlbums = getStoredGuestAlbums();
+    const byId = profile.albumId ? storedAlbums.find((album) => album.id === profile.albumId) : null;
+
+    if (byId) {
+        return byId;
+    }
+
+    const byName = storedAlbums.find((album) => album.ownerName === profile.name && album.ownerType === "guest");
+
+    if (byName) {
+        return byName;
+    }
+
+    return normalizeGuestAlbumRecord({
+        id: generateGuestId("guest-album"),
+        ownerName: profile.name,
+        ownerType: "guest",
+        createdAt: new Date().toISOString(),
+        photos: [],
+        video: null
+    });
+}
+
+function getGuestPublicAlbums(profile = getStoredAccessProfile()) {
+    const currentAlbum = getCurrentGuestAlbum(profile);
+    const hasCurrentContent = Boolean(currentAlbum && ((currentAlbum.photos || []).length > 0 || currentAlbum.video));
+    const storedPublicAlbums = getStoredGuestAlbums()
+        .filter((album) => album.photos.length > 0 || album.video)
+        .filter((album) => !currentAlbum || album.id !== currentAlbum.id);
+
+    return [
+        ...(hasCurrentContent ? [currentAlbum] : []),
+        ...storedPublicAlbums,
+        ...getGuestSeedAlbums()
+    ];
+}
+
+function getGuestFilteredAlbums(query, profile = getStoredAccessProfile()) {
+    const normalizedQuery = query.trim().toLowerCase();
+    const albums = getGuestPublicAlbums(profile);
+
+    if (!normalizedQuery) {
+        return albums;
+    }
+
+    return albums.filter((album) => album.ownerName.toLowerCase().includes(normalizedQuery));
+}
+
+function getAdminFilteredAlbums(query) {
+    return getGuestFilteredAlbums(query, { type: "admin" });
+}
+
+function getGuestAlbumMediaItems(album) {
+    if (!album) {
+        return [];
+    }
+
+    return [
+        ...(album.photos || []).map((photo) => normalizeGuestMediaItem(photo, "photo")),
+        ...(album.video ? [normalizeGuestMediaItem(album.video, "video")] : [])
+    ].filter(Boolean);
+}
+
+function ensureGuestViewerListeners() {
+    document.removeEventListener("keydown", handleGuestViewerKeydown);
+    document.addEventListener("keydown", handleGuestViewerKeydown);
+}
+
+function openGuestViewer(items, startIndex = 0, title = "") {
+    if (!items || !items.length) {
+        return;
+    }
+
+    guestCenterState.viewer = {
+        open: true,
+        items,
+        index: Math.max(0, Math.min(startIndex, items.length - 1)),
+        title
+    };
+
+    renderAlbumsSection();
+    ensureGuestViewerListeners();
+}
+
+function closeGuestViewer() {
+    if (!guestCenterState.viewer.open) {
+        return;
+    }
+
+    guestCenterState.viewer = {
+        open: false,
+        items: [],
+        index: 0,
+        title: ""
+    };
+
+    document.removeEventListener("keydown", handleGuestViewerKeydown);
+    renderAlbumsSection();
+}
+
+function moveGuestViewer(step) {
+    const viewer = guestCenterState.viewer;
+
+    if (!viewer.open || !viewer.items.length) {
+        return;
+    }
+
+    viewer.index = (viewer.index + step + viewer.items.length) % viewer.items.length;
+    renderAlbumsSection();
+}
+
+function handleGuestViewerKeydown(event) {
+    if (!guestCenterState.viewer.open) {
+        return;
+    }
+
+    if (event.key === "Escape") {
+        closeGuestViewer();
+        return;
+    }
+
+    if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        moveGuestViewer(-1);
+        return;
+    }
+
+    if (event.key === "ArrowRight") {
+        event.preventDefault();
+        moveGuestViewer(1);
+    }
+}
+
+function renderGuestViewer() {
+    if (!guestCenterState.viewer.open || !guestCenterState.viewer.items.length) {
+        return "";
+    }
+
+    const currentItem = guestCenterState.viewer.items[guestCenterState.viewer.index];
+
+    if (!currentItem) {
+        return "";
+    }
+
+    const content = currentItem.kind === "video"
+        ? `
+            <video class="guest-viewer-media" controls playsinline preload="metadata" src="${escapeHTML(currentItem.src)}"></video>
+        `
+        : `
+            <img class="guest-viewer-media" src="${escapeHTML(currentItem.src)}" alt="${escapeHTML(currentItem.name)}">
+        `;
+    const thumbnails = guestCenterState.viewer.items.map((item, index) => {
+        const isActive = index === guestCenterState.viewer.index;
+
+        return `
+            <button class="guest-viewer-thumb ${isActive ? "is-active" : ""}" type="button" data-guest-action="select-viewer-item" data-guest-media-index="${index}" aria-label="Ver elemento ${index + 1}">
+                ${item.kind === "video" ? `
+                    <video class="guest-viewer-thumb-media" src="${escapeHTML(item.src)}" muted playsinline preload="metadata" aria-hidden="true"></video>
+                    <span class="guest-viewer-thumb-play" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
+                ` : `
+                    <img class="guest-viewer-thumb-media" src="${escapeHTML(item.src)}" alt="">
+                `}
+            </button>
+        `;
+    }).join("");
+
+    return `
+        <div class="official-lightbox" id="guest-media-viewer" role="dialog" aria-modal="true" aria-label="Visor de recuerdos">
+            <div class="official-lightbox-backdrop" data-guest-action="close-viewer"></div>
+            <div class="official-lightbox-panel">
+                <button class="official-lightbox-close" type="button" data-guest-action="close-viewer" aria-label="Cerrar visor">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+                <button class="official-lightbox-nav official-lightbox-prev" type="button" data-guest-action="previous" aria-label="Anterior">
+                    <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+                </button>
+                <button class="official-lightbox-nav official-lightbox-next" type="button" data-guest-action="next" aria-label="Siguiente">
+                    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                </button>
+                <figure class="official-lightbox-figure">
+                    ${content}
+                </figure>
+                <div class="guest-viewer-thumbnails" aria-label="Miniaturas del visor">
+                    ${thumbnails}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function updateGuestProfileAlbumId(album) {
+    const profile = getStoredAccessProfile();
+
+    if (!profile || profile.type !== "guest") {
+        return;
+    }
+
+    const nextProfile = {
+        ...profile,
+        albumId: album.id
+    };
+
+    localStorage.setItem(accessStorageKey, JSON.stringify(nextProfile));
+}
+
+function getOrCreateCurrentGuestAlbum() {
+    const profile = getStoredAccessProfile();
+
+    if (!profile || profile.type !== "guest" || !profile.name) {
+        return null;
+    }
+
+    const storedAlbums = getStoredGuestAlbums();
+    let album = getCurrentGuestAlbum(profile);
+
+    if (album && storedAlbums.find((item) => item.id === album.id)) {
+        return album;
+    }
+
+    if (album && !storedAlbums.find((item) => item.id === album.id)) {
+        storedAlbums.push(album);
+        saveStoredGuestAlbums(storedAlbums);
+        updateGuestProfileAlbumId(album);
+        return album;
+    }
+
+    album = normalizeGuestAlbumRecord({
+        id: generateGuestId("guest-album"),
+        ownerName: profile.name,
+        ownerType: "guest",
+        createdAt: new Date().toISOString(),
+        photos: [],
+        video: null
+    });
+
+    storedAlbums.push(album);
+    saveStoredGuestAlbums(storedAlbums);
+    updateGuestProfileAlbumId(album);
+    return album;
+}
+
+function renderGuestPersonalAlbumPreview() {
+    const titleElement = document.getElementById("personal-album-title");
+    const descriptionElement = document.getElementById("personal-album-description");
+    const listElement = document.getElementById("guest-personal-media-list");
+    const emptyStateElement = document.getElementById("guest-personal-empty-state");
+    const profile = getStoredAccessProfile();
+    const album = getOrCreateCurrentGuestAlbum();
+
+    if (!titleElement || !descriptionElement || !listElement || !emptyStateElement) {
+        return;
+    }
+
+    const isGuest = profile && profile.type === "guest" && profile.name;
+    const photoCount = album ? (album.photos || []).length : 0;
+    const hasVideo = Boolean(album && album.video);
+    const hasContent = Boolean(photoCount || hasVideo);
+
+    titleElement.textContent = isGuest ? `Mi Álbum - ${profile.name}` : "Mi Álbum";
+    descriptionElement.textContent = hasContent
+        ? "Tus recuerdos ya están guardados en este álbum."
+        : "Sumá fotografías y un video para armar tu álbum personal.";
+
+    const items = [
+        ...(album && album.photos ? album.photos.map((photo, index) => ({
+            ...normalizeGuestMediaItem(photo, "photo"),
+            displayName: photo.name || `Foto ${index + 1}`
+        })) : []),
+        ...(album && album.video ? [{
+            ...normalizeGuestMediaItem(album.video, "video"),
+            displayName: album.video.name || "Video"
+        }] : [])
+    ];
+
+    listElement.innerHTML = hasContent ? items.map((item, index) => `
+        <article class="guest-personal-media-item ${item.kind === "video" ? "is-video" : "is-photo"}">
+            <button class="guest-personal-media-visual" type="button" data-guest-action="open-personal-media" data-guest-media-index="${index}" aria-label="Abrir ${escapeHTML(item.displayName)}">
+                ${item.kind === "video" ? `
+                    <span class="guest-personal-media-play"><i class="fa-solid fa-play" aria-hidden="true"></i></span>
+                ` : `
+                    <img src="${escapeHTML(item.src)}" alt="${escapeHTML(item.displayName)}">
+                `}
+            </button>
+            <div class="guest-personal-media-copy">
+                <p class="personal-media-kind">${item.kind === "video" ? "Video" : "Foto"}</p>
+                <h4 class="personal-media-title">${escapeHTML(item.displayName)}</h4>
+                <p class="personal-media-meta">${item.kind === "video" ? "Guardado en tu álbum" : "Guardada en tu álbum"}</p>
+            </div>
+            <button class="guest-personal-delete-btn" type="button" data-guest-action="delete-personal-media" data-guest-media-id="${escapeHTML(item.id)}" aria-label="Eliminar ${escapeHTML(item.displayName)}">
+                <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+            </button>
+        </article>
+    `).join("") : "";
+
+    emptyStateElement.hidden = hasContent;
+    listElement.hidden = !hasContent;
+}
+
+function addGuestPhotos(files) {
+    const imageFiles = Array.from(files || []).filter((file) => file && file.type && file.type.startsWith("image/"));
+
+    if (!imageFiles.length) {
+        return;
+    }
+
+    const album = getOrCreateCurrentGuestAlbum();
+
+    if (!album) {
+        return;
+    }
+
+    if (imageFiles.length > 20) {
+        showToast("Podés subir hasta 20 fotografías por carga. Hacé otra carga para seguir agregando.", "default");
+        return;
+    }
+
+    const currentPhotos = Array.isArray(album.photos) ? album.photos.slice() : [];
+    const appendedPhotos = imageFiles.map((file) => ({
+        id: generateGuestId("guest-photo"),
+        kind: "photo",
+        name: file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim() || "Foto",
+        src: window.URL.createObjectURL(file),
+        createdAt: new Date().toISOString(),
+        fileName: file.name,
+        mimeType: file.type,
+        objectUrl: null
+    }));
+
+    album.photos = currentPhotos.concat(appendedPhotos);
+
+    const storedAlbums = getStoredGuestAlbums();
+    const nextAlbums = storedAlbums.some((item) => item.id === album.id)
+        ? storedAlbums.map((item) => (item.id === album.id ? album : item))
+        : storedAlbums.concat(album);
+
+    saveStoredGuestAlbums(nextAlbums);
+    renderAlbumsSection();
+
+    showToast("Tus fotografías quedaron agregadas al álbum.", "success");
+}
+
+function addGuestVideo(file) {
+    if (!file || !file.type || !file.type.startsWith("video/")) {
+        return;
+    }
+
+    const album = getOrCreateCurrentGuestAlbum();
+
+    if (!album) {
+        return;
+    }
+
+    if (album.video && (album.video.objectUrl || album.video.src)) {
+        window.URL.revokeObjectURL(album.video.objectUrl || album.video.src);
+    }
+
+    album.video = {
+        id: generateGuestId("guest-video"),
+        kind: "video",
+        name: file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim() || "Video",
+        src: window.URL.createObjectURL(file),
+        createdAt: new Date().toISOString(),
+        fileName: file.name,
+        mimeType: file.type,
+        objectUrl: null
+    };
+
+    const storedAlbums = getStoredGuestAlbums();
+    const nextAlbums = storedAlbums.some((item) => item.id === album.id)
+        ? storedAlbums.map((item) => (item.id === album.id ? album : item))
+        : storedAlbums.concat(album);
+
+    saveStoredGuestAlbums(nextAlbums);
+    renderAlbumsSection();
+    showToast("Tu video quedó agregado al álbum.", "success");
+}
+
+function removeGuestMedia(mediaId) {
+    const album = getOrCreateCurrentGuestAlbum();
+
+    if (!album || !mediaId) {
+        return;
+    }
+
+    const isPhoto = Array.isArray(album.photos) && album.photos.some((photo) => photo.id === mediaId);
+    const isVideo = album.video && album.video.id === mediaId;
+
+    if (!isPhoto && !isVideo) {
+        return;
+    }
+
+    if (isPhoto) {
+        const targetPhoto = album.photos.find((photo) => photo.id === mediaId);
+        if (targetPhoto && (targetPhoto.objectUrl || targetPhoto.src)) {
+            window.URL.revokeObjectURL(targetPhoto.objectUrl || targetPhoto.src);
+        }
+        album.photos = album.photos.filter((photo) => photo.id !== mediaId);
+    }
+
+    if (isVideo && album.video && album.video.objectUrl) {
+        window.URL.revokeObjectURL(album.video.objectUrl);
+        album.video = null;
+    }
+
+    const storedAlbums = getStoredGuestAlbums();
+    const nextAlbums = storedAlbums.some((item) => item.id === album.id)
+        ? storedAlbums.map((item) => (item.id === album.id ? album : item))
+        : storedAlbums.concat(album);
+
+    saveStoredGuestAlbums(nextAlbums);
+    renderAlbumsSection();
+}
+
+function openGuestMediaFromAlbum(albumId, startIndex = 0) {
+    const profile = getStoredAccessProfile();
+    const album = albumId === (profile && profile.albumId)
+        ? getOrCreateCurrentGuestAlbum()
+        : [...getGuestPublicAlbums(profile), getOrCreateCurrentGuestAlbum()].find((item) => item && item.id === albumId);
+
+    if (!album) {
+        return;
+    }
+
+    const items = getGuestAlbumMediaItems(album);
+    openGuestViewer(items, startIndex, album.ownerName);
+}
+
+function openGuestPresentation() {
+    const profile = getStoredAccessProfile();
+    const currentAlbum = getOrCreateCurrentGuestAlbum();
+    const catalog = [currentAlbum, ...getGuestPublicAlbums(profile)].filter(Boolean);
+    const items = catalog.flatMap((album) => getGuestAlbumMediaItems(album));
+
+    if (!items.length) {
+        return;
+    }
+
+    openGuestViewer(items, 0, "Presentación");
+}
+
+function bindGuestAlbumInteractions() {
+    const photosButton = document.getElementById("guest-upload-photos-btn");
+    const videoButton = document.getElementById("guest-upload-video-btn");
+    const photosInput = document.getElementById("guest-photos-input");
+    const videoInput = document.getElementById("guest-video-input");
+    const searchInput = document.getElementById("guest-album-search");
+    const loadMoreButton = document.getElementById("guest-load-more-btn");
+    const personalLoadMoreButton = document.getElementById("guest-personal-load-more-btn");
+    const presentationButton = document.getElementById("guest-presentation-btn");
+    const grid = document.getElementById("guest-albums-grid");
+    const personalList = document.getElementById("guest-personal-media-list");
+    const viewer = document.getElementById("guest-media-viewer");
+
+    if (photosButton && photosInput) {
+        photosButton.onclick = () => photosInput.click();
+    }
+
+    if (videoButton && videoInput) {
+        videoButton.onclick = () => videoInput.click();
+    }
+
+    if (photosInput) {
+        photosInput.onchange = (event) => {
+            addGuestPhotos(event.target.files);
+            event.target.value = "";
+        };
+    }
+
+    if (videoInput) {
+        videoInput.onchange = (event) => {
+            const file = event.target.files && event.target.files[0];
+            addGuestVideo(file);
+            event.target.value = "";
+        };
+    }
+
+    if (searchInput) {
+        searchInput.oninput = (event) => {
+            guestCenterState.searchQuery = event.target.value;
+            guestCenterState.visibleCount = 5;
+            renderAlbumsSection();
+        };
+    }
+
+    if (loadMoreButton) {
+        loadMoreButton.onclick = () => {
+            guestCenterState.visibleCount += 5;
+            renderAlbumsSection();
+        };
+    }
+
+    if (presentationButton) {
+        presentationButton.onclick = openGuestPresentation;
+    }
+
+    if (grid) {
+        grid.querySelectorAll("[data-guest-album-id]").forEach((card) => {
+            card.addEventListener("click", () => {
+                const albumId = card.dataset.guestAlbumId;
+                if (albumId) {
+                    openGuestMediaFromAlbum(albumId, 0);
+                }
+            });
+
+            card.addEventListener("keydown", (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    const albumId = card.dataset.guestAlbumId;
+                    if (albumId) {
+                        openGuestMediaFromAlbum(albumId, 0);
+                    }
+                }
+            });
+        });
+    }
+
+    if (personalList) {
+        personalList.querySelectorAll("[data-guest-action=\"open-personal-media\"]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const mediaIndex = Number(button.dataset.guestMediaIndex);
+                const album = getOrCreateCurrentGuestAlbum();
+                const mediaItems = getGuestAlbumMediaItems(album);
+                if (!Number.isNaN(mediaIndex) && mediaItems[mediaIndex]) {
+                    openGuestViewer(mediaItems, mediaIndex, "Mi Álbum");
+                }
+            });
+        });
+
+        personalList.querySelectorAll("[data-guest-action=\"delete-personal-media\"]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const mediaId = button.dataset.guestMediaId;
+                if (mediaId) {
+                    removeGuestMedia(mediaId);
+                }
+            });
+        });
+    }
+
+    if (viewer) {
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        viewer.querySelectorAll("[data-guest-action]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const action = button.dataset.guestAction;
+
+                if (action === "close-viewer") {
+                    closeGuestViewer();
+                } else if (action === "previous") {
+                    moveGuestViewer(-1);
+                } else if (action === "next") {
+                    moveGuestViewer(1);
+                }
+            });
+        });
+
+        viewer.addEventListener("touchstart", (event) => {
+            const touch = event.touches[0];
+            if (!touch) {
+                return;
+            }
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+        }, { passive: true });
+
+        viewer.addEventListener("touchend", (event) => {
+            const touch = event.changedTouches[0];
+            if (!touch) {
+                return;
+            }
+
+            const deltaX = touch.clientX - touchStartX;
+            const deltaY = touch.clientY - touchStartY;
+
+            if (Math.abs(deltaX) > 42 && Math.abs(deltaX) > Math.abs(deltaY)) {
+                moveGuestViewer(deltaX < 0 ? 1 : -1);
+            }
+        }, { passive: true });
+    }
+}
+
+function renderGuestCenterSection(profile) {
+    const currentAlbum = getOrCreateCurrentGuestAlbum();
+    const hasContent = Boolean(currentAlbum && ((currentAlbum.photos || []).length > 0 || currentAlbum.video));
+    const albumTitle = profile && profile.type === "guest" && profile.name ? `Mi Álbum - ${profile.name}` : "Mi Álbum";
+    const albumDescription = hasContent
+        ? "Tus recuerdos ya están guardados en este álbum."
+        : "Sumá fotografías y un video para armar tu álbum personal.";
+    const personalItems = currentAlbum ? getGuestAlbumMediaItems(currentAlbum) : [];
+    const catalog = getGuestFilteredAlbums(guestCenterState.searchQuery, profile);
+    const visibleCatalog = catalog.slice(0, guestCenterState.visibleCount);
+
+    return `
+        <div class="recuerdos-section-copy">
+            <p class="recuerdos-section-kicker">Álbumes</p>
+            <h2>Centro de Recuerdos</h2>
+            <p>Tu álbum personal convive con otros álbumes guardados en este dispositivo.</p>
+        </div>
+
+        <div class="albums-layout">
+            <article class="center-my-album-card guest-my-album-card">
+                <i class="fa-solid fa-folder-open center-my-album-icon" aria-hidden="true"></i>
+                <h3 id="personal-album-title">${escapeHTML(albumTitle)}</h3>
+                <p id="personal-album-description" class="personal-album-description">${escapeHTML(albumDescription)}</p>
+
+                <div class="center-my-album-actions" aria-label="Acciones del álbum personal">
+                    <button id="guest-upload-photos-btn" class="btn-rectangular" type="button">Subir fotografías</button>
+                    <button id="guest-upload-video-btn" class="btn-rectangular btn-secundario" type="button">Subir video</button>
+                </div>
+
+                <input id="guest-photos-input" type="file" accept="image/*" multiple hidden>
+                <input id="guest-video-input" type="file" accept="video/*" hidden>
+
+                <div class="guest-personal-album-media">
+                    <div id="guest-personal-empty-state" class="album-empty-state" ${hasContent ? "hidden" : ""}>
+                        <i class="fa-solid fa-photo-film album-empty-icon" aria-hidden="true"></i>
+                        <h3>Tu álbum está esperando recuerdos</h3>
+                        <p>Sumá fotografías y un video para verlo completo.</p>
+                    </div>
+
+                    <div id="guest-personal-media-list" class="guest-personal-media-list" aria-live="polite"></div>
+                </div>
+            </article>
+
+            <aside class="guest-albums">
+                <div class="guest-albums-header">
+                    <p class="recuerdos-section-kicker">Buscar invitados</p>
+                    <h3>Explorar álbumes</h3>
+                    <p>Buscá por nombre y abrí cualquier álbum para ver todas sus fotos.</p>
+                </div>
+
+                <label class="guest-search-field" for="guest-album-search">
+                    <span>Buscar por nombre</span>
+                    <input id="guest-album-search" type="search" autocomplete="off" placeholder="Escribí un nombre para explorar" value="${escapeHTML(guestCenterState.searchQuery)}">
+                </label>
+
+                <div class="guest-albums-summary" id="guest-albums-summary">${escapeHTML(catalog.length ? `${Math.min(visibleCatalog.length, catalog.length)} de ${catalog.length} álbumes visibles` : "No hay álbumes para mostrar")}</div>
+                <div id="guest-albums-grid" class="guest-albums-grid" aria-live="polite">
+                    ${visibleCatalog.map((album) => {
+                        const firstPhoto = album.photos[0];
+                        const cover = firstPhoto ? firstPhoto.src : "assets/img-1.png";
+                        const initials = initialsFromName(album.ownerName);
+                        const count = (album.photos || []).length + (album.video ? 1 : 0);
+                        return `
+                            <button class="guest-album-item accent-rose" type="button" data-guest-album-id="${escapeHTML(album.id)}">
+                                <span class="guest-album-initials" aria-hidden="true" style="background-image: ${firstPhoto ? `url('${escapeHTML(cover)}')` : "none"}">${escapeHTML(firstPhoto ? "" : initials)}</span>
+                                <div class="guest-album-copy">
+                                    <p class="guest-album-owner">${escapeHTML(album.ownerName)}</p>
+                                    <h4 class="guest-album-title">${escapeHTML(album.ownerName)}</h4>
+                                    <p class="guest-album-meta">${count} recuerdo${count === 1 ? "" : "s"}</p>
+                                </div>
+                            </button>
+                        `;
+                    }).join("")}
+                </div>
+
+                <button id="guest-load-more-btn" class="btn-rectangular center-more-btn" type="button"${visibleCatalog.length >= catalog.length ? " hidden" : ""}>Ver más álbumes</button>
+            </aside>
+        </div>
+
+        ${renderGuestViewer()}
+    `;
+}
+
+function renderAdminCenterSection() {
+    const catalog = getAdminFilteredAlbums(adminCenterState.searchQuery);
+    const albumsPagination = getGuestPaginationWindow(catalog, adminCenterState.albumsPage, 10);
+    adminCenterState.albumsPage = albumsPagination.currentPage;
+    const albumSummary = catalog.length ? `${albumsPagination.currentPage} de ${albumsPagination.totalPages}` : "0 de 0";
+    const albumAccentClasses = ["accent-rose", "accent-lavender", "accent-sand", "accent-plum"];
+
+    return `
+        <div class="guest-albums">
+            <div class="guest-albums-header">
+                <i class="fa-solid fa-folder-open guest-albums-heading-icon" aria-hidden="true"></i>
+                <h3>Explorar álbumes</h3>
+                <div class="guest-albums-toolbar">
+                    <label class="guest-search-field" for="guest-album-search">
+                        <span>Buscar por nombre</span>
+                        <input id="guest-album-search" type="search" autocomplete="off" placeholder="Escribí un nombre para explorar" value="${escapeHTML(adminCenterState.searchQuery)}">
+                    </label>
+
+                    <div class="guest-albums-summary" id="guest-albums-summary">${escapeHTML(albumSummary)}</div>
+                </div>
+            </div>
+
+            <div id="guest-albums-grid" class="guest-albums-grid" aria-live="polite">
+                ${albumsPagination.items.map((album, index) => {
+                    const accentClass = album.accentClass || albumAccentClasses[index % albumAccentClasses.length];
+                    return `
+                        <button class="guest-album-item ${escapeHTML(accentClass)}" type="button" data-guest-album-id="${escapeHTML(album.id)}">
+                            <span class="guest-album-initials" aria-hidden="true">
+                                <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+                            </span>
+                            <span class="guest-album-name">${escapeHTML(album.ownerName)}</span>
+                        </button>
+                    `;
+                }).join("")}
+            </div>
+
+            <div id="guest-albums-pagination" class="guest-pagination" ${albumsPagination.totalPages > 1 ? "" : "hidden"}>
+                <button class="guest-pagination-btn" type="button" data-guest-action="albums-page-prev" aria-label="Página anterior">Anterior</button>
+                <span class="guest-pagination-label" data-guest-role="page-indicator">${albumsPagination.currentPage} de ${albumsPagination.totalPages}</span>
+                <button class="guest-pagination-btn" type="button" data-guest-action="albums-page-next" aria-label="Página siguiente">Siguiente</button>
+            </div>
+        </div>
+
+        ${renderGuestViewer()}
+    `;
+}
+
+function bindAdminAlbumInteractions() {
+    const searchInput = document.getElementById("guest-album-search");
+    const grid = document.getElementById("guest-albums-grid");
+    const albumsPagination = document.getElementById("guest-albums-pagination");
+    const viewer = document.getElementById("guest-media-viewer");
+
+    if (searchInput) {
+        searchInput.oninput = (event) => {
+            adminCenterState.searchQuery = event.target.value;
+            adminCenterState.albumsPage = 1;
+            renderAlbumsSection();
+        };
+    }
+
+    if (albumsPagination) {
+        const prevButton = albumsPagination.querySelector("[data-guest-action=\"albums-page-prev\"]");
+        const nextButton = albumsPagination.querySelector("[data-guest-action=\"albums-page-next\"]");
+
+        if (prevButton) {
+            prevButton.onclick = () => {
+                if (adminCenterState.albumsPage > 1) {
+                    adminCenterState.albumsPage -= 1;
+                    renderAlbumsSection();
+                }
+            };
+        }
+
+        if (nextButton) {
+            nextButton.onclick = () => {
+                const totalAlbums = getAdminFilteredAlbums(adminCenterState.searchQuery).length;
+                const totalPages = Math.max(1, Math.ceil(totalAlbums / 10));
+
+                if (adminCenterState.albumsPage < totalPages) {
+                    adminCenterState.albumsPage += 1;
+                    renderAlbumsSection();
+                }
+            };
+        }
+    }
+
+    if (grid) {
+        grid.querySelectorAll("[data-guest-album-id]").forEach((card) => {
+            card.addEventListener("click", () => {
+                const albumId = card.dataset.guestAlbumId;
+                if (albumId) {
+                    openGuestMediaFromAlbum(albumId, 0);
+                }
+            });
+        });
+    }
+
+    if (viewer) {
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        viewer.querySelectorAll("[data-guest-action]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const action = button.dataset.guestAction;
+
+                if (action === "close-viewer") {
+                    closeGuestViewer();
+                } else if (action === "previous") {
+                    moveGuestViewer(-1);
+                } else if (action === "next") {
+                    moveGuestViewer(1);
+                } else if (action === "select-viewer-item") {
+                    const mediaIndex = Number(button.dataset.guestMediaIndex);
+                    if (!Number.isNaN(mediaIndex)) {
+                        guestCenterState.viewer.index = mediaIndex;
+                        renderAlbumsSection();
+                    }
+                }
+            });
+        });
+
+        viewer.addEventListener("touchstart", (event) => {
+            const touch = event.touches[0];
+            if (!touch) {
+                return;
+            }
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+        }, { passive: true });
+
+        viewer.addEventListener("touchend", (event) => {
+            const touch = event.changedTouches[0];
+            if (!touch) {
+                return;
+            }
+
+            const deltaX = touch.clientX - touchStartX;
+            const deltaY = touch.clientY - touchStartY;
+
+            if (Math.abs(deltaX) > 42 && Math.abs(deltaX) > Math.abs(deltaY)) {
+                moveGuestViewer(deltaX < 0 ? 1 : -1);
+            }
+        }, { passive: true });
+    }
+}
+
+function renderAlbumsSection() {
+    const section = document.getElementById("albums-section");
+    const activeElement = document.activeElement;
+    const shouldRestoreSearchFocus = Boolean(activeElement && activeElement.id === "guest-album-search");
+    const searchSelection = shouldRestoreSearchFocus
+        ? {
+            value: activeElement.value,
+            start: activeElement.selectionStart,
+            end: activeElement.selectionEnd,
+            direction: activeElement.selectionDirection
+        }
+        : null;
+    const previousScrollY = window.scrollY;
+
+    if (!section) {
+        return;
+    }
+
+    const profile = getStoredAccessProfile();
+    const isGuest = profile && profile.type === "guest" && profile.name;
+
+    section.className = "section bg-lavanda recuerdos-center-section";
+
+    if (isGuest) {
+        section.innerHTML = renderGuestCenterSection(profile);
+        renderGuestPersonalAlbumPreview();
+        bindGuestAlbumInteractions();
+
+        if (shouldRestoreSearchFocus) {
+            const nextSearchInput = document.getElementById("guest-album-search");
+
+            if (nextSearchInput) {
+                nextSearchInput.focus({ preventScroll: true });
+
+                if (searchSelection) {
+                    const selectionStart = typeof searchSelection.start === "number" ? searchSelection.start : searchSelection.value.length;
+                    const selectionEnd = typeof searchSelection.end === "number" ? searchSelection.end : searchSelection.value.length;
+
+                    try {
+                        nextSearchInput.setSelectionRange(selectionStart, selectionEnd, searchSelection.direction || "none");
+                    } catch (error) {
+                        nextSearchInput.setSelectionRange(selectionStart, selectionEnd);
+                    }
+                }
+            }
+
+            window.scrollTo({ top: previousScrollY, left: 0, behavior: "auto" });
+        }
+        return;
+    }
+
+    section.innerHTML = renderAdminCenterSection();
+    bindAdminAlbumInteractions();
+
+    if (shouldRestoreSearchFocus) {
+        const nextSearchInput = document.getElementById("guest-album-search");
+
+        if (nextSearchInput) {
+            nextSearchInput.focus({ preventScroll: true });
+
+            if (searchSelection) {
+                const selectionStart = typeof searchSelection.start === "number" ? searchSelection.start : searchSelection.value.length;
+                const selectionEnd = typeof searchSelection.end === "number" ? searchSelection.end : searchSelection.value.length;
+
+                try {
+                    nextSearchInput.setSelectionRange(selectionStart, selectionEnd, searchSelection.direction || "none");
+                } catch (error) {
+                    nextSearchInput.setSelectionRange(selectionStart, selectionEnd);
+                }
+            }
+        }
+
+        window.scrollTo({ top: previousScrollY, left: 0, behavior: "auto" });
+    }
+}
+
+function renderAlbumsSection() {
+    const section = document.getElementById("albums-section");
+    const activeElement = document.activeElement;
+    const shouldRestoreSearchFocus = Boolean(activeElement && activeElement.id === "guest-album-search");
+    const searchSelection = shouldRestoreSearchFocus
+        ? {
+            value: activeElement.value,
+            start: activeElement.selectionStart,
+            end: activeElement.selectionEnd,
+            direction: activeElement.selectionDirection
+        }
+        : null;
+    const previousScrollY = window.scrollY;
+
+    if (!section) {
+        return;
+    }
+
+    const profile = getStoredAccessProfile();
+    const isGuest = profile && profile.type === "guest" && profile.name;
+
+    section.className = "section bg-lavanda recuerdos-center-section";
+
+    if (isGuest) {
+        section.innerHTML = renderGuestCenterSection(profile);
+        renderGuestPersonalAlbumPreview();
+        bindGuestAlbumInteractions();
+
+        if (shouldRestoreSearchFocus) {
+            const nextSearchInput = document.getElementById("guest-album-search");
+
+            if (nextSearchInput) {
+                nextSearchInput.focus({ preventScroll: true });
+
+                if (searchSelection) {
+                    const selectionStart = typeof searchSelection.start === "number" ? searchSelection.start : searchSelection.value.length;
+                    const selectionEnd = typeof searchSelection.end === "number" ? searchSelection.end : searchSelection.value.length;
+
+                    try {
+                        nextSearchInput.setSelectionRange(selectionStart, selectionEnd, searchSelection.direction || "none");
+                    } catch (error) {
+                        nextSearchInput.setSelectionRange(selectionStart, selectionEnd);
+                    }
+                }
+            }
+
+            window.scrollTo({ top: previousScrollY, left: 0, behavior: "auto" });
+        }
+        return;
+    }
+
+    section.innerHTML = renderAdminCenterSection();
+    bindAdminAlbumInteractions();
+    return;
+    const demoAlbums = ["Julieta", "Sofía", "Nicolás", "Camila", "Laura"];
+
+    section.innerHTML = `
+        <i class="fa-solid fa-folder-open icon-evento" aria-hidden="true"></i>
+        <h2>Centro de Recuerdos</h2>
+        <p class="center-section-intro">Desde aquí podés administrar el contenido compartido por los invitados y revisar todos los álbumes.</p>
+
+        <article class="center-my-album-card">
+            <i class="fa-solid fa-folder-open center-my-album-icon" aria-hidden="true"></i>
+            <h3 id="personal-album-title">Mi Álbum - ${escapeHTML(guestName)}</h3>
+            <div class="center-my-album-actions" aria-label="Acciones del álbum personal">
+                <button id="personal-upload-photos-btn" class="btn-rectangular" type="button">Subir fotografías</button>
+                <button id="personal-upload-video-btn" class="btn-rectangular btn-secundario" type="button">Subir video</button>
+            </div>
+        </article>
+
+        <div class="center-explore">
+            <h3>Explorar Álbumes</h3>
+
+            <div class="center-explore-tools">
+                <label class="center-search-field" for="guest-album-search">
+                    <span>Buscar por nombre</span>
+                    <input id="guest-album-search" type="search" autocomplete="off" placeholder="Escribí un nombre">
+                </label>
+
+                <button class="btn-rectangular btn-secundario center-presentation-btn" type="button">Presentación</button>
+            </div>
+
+            <div id="guest-albums-grid" class="center-albums-grid" aria-live="polite"></div>
+
+            <button class="btn-rectangular center-more-btn" type="button">Ver más álbumes</button>
+        </div>
+    `;
+
+    const searchInput = document.getElementById("guest-album-search");
+    const gridElement = document.getElementById("guest-albums-grid");
+
+    const renderDirectory = (query) => {
+        if (!gridElement) {
+            return;
+        }
+
+        const normalizedQuery = query.trim().toLowerCase();
+        const filteredAlbums = demoAlbums.filter((ownerName) => ownerName.toLowerCase().includes(normalizedQuery));
+
+        gridElement.innerHTML = filteredAlbums.map((ownerName) => `
+            <article class="center-album-item">
+                <i class="fa-solid fa-folder-open center-album-icon" aria-hidden="true"></i>
+                <h4 class="center-album-name">${escapeHTML(ownerName)}</h4>
+            </article>
+        `).join("");
+    };
+
+    if (searchInput) {
+        searchInput.oninput = (event) => renderDirectory(event.target.value);
+        renderDirectory(searchInput.value);
+    }
+}
+
+function initializeToastInteractions() {
+    const guestPhotosButton = document.getElementById("guest-upload-photos-btn");
+    const guestVideoButton = document.getElementById("guest-upload-video-btn");
+    const adminPhotosButton = document.getElementById("personal-upload-photos-btn");
+    const adminVideoButton = document.getElementById("personal-upload-video-btn");
+    const presentationButton = document.getElementById("guest-presentation-btn");
+
+    if (presentationButton) {
+        presentationButton.addEventListener("click", openGuestPresentation);
+    }
+
+    if (guestPhotosButton) {
+        guestPhotosButton.addEventListener("click", () => {
+            const input = document.getElementById("guest-photos-input");
+            if (input) {
+                input.click();
+            }
+        });
+    }
+
+    if (guestVideoButton) {
+        guestVideoButton.addEventListener("click", () => {
+            const input = document.getElementById("guest-video-input");
+            if (input) {
+                input.click();
+            }
+        });
+    }
+
+    if (adminPhotosButton) {
+        adminPhotosButton.addEventListener("click", () => {
+            simulatePersonalUpload("Fotos");
+        });
+    }
+
+    if (adminVideoButton) {
+        adminVideoButton.addEventListener("click", () => {
+            simulatePersonalUpload("Video");
+        });
+    }
+}
+
+function renderGuestPersonalAlbumPreview() {
+    const titleElement = document.getElementById("personal-album-title");
+    const descriptionElement = document.getElementById("personal-album-description");
+    const listElement = document.getElementById("guest-personal-media-list");
+    const emptyStateElement = document.getElementById("guest-personal-empty-state");
+    const loadMoreButton = document.getElementById("guest-personal-load-more-btn");
+    const profile = getStoredAccessProfile();
+    const album = getOrCreateCurrentGuestAlbum();
+
+    if (!titleElement || !descriptionElement || !listElement || !emptyStateElement) {
+        return;
+    }
+
+    const isGuest = profile && profile.type === "guest" && profile.name;
+    const photoCount = album ? (album.photos || []).length : 0;
+    const hasVideo = Boolean(album && album.video);
+    const hasContent = Boolean(photoCount || hasVideo);
+
+    titleElement.textContent = isGuest ? `Mi Álbum - ${profile.name}` : "Mi Álbum";
+    descriptionElement.textContent = hasContent
+        ? "Tus recuerdos ya están guardados en este álbum."
+        : "Sumá fotografías y un video para armar tu álbum personal.";
+    descriptionElement.hidden = !hasContent;
+
+    const items = [
+        ...(album && album.photos ? album.photos.map((photo, index) => ({
+            ...normalizeGuestMediaItem(photo, "photo"),
+            displayName: photo.name || `Foto ${index + 1}`
+        })) : []),
+        ...(album && album.video ? [{
+            ...normalizeGuestMediaItem(album.video, "video"),
+            displayName: album.video.name || "Video"
+        }] : [])
+    ];
+
+    const pagination = getGuestPaginationWindow(items, guestCenterState.personalPage, 10);
+    guestCenterState.personalPage = pagination.currentPage;
+    const visibleItems = pagination.items;
+    const showPagination = hasContent && pagination.totalItems > 10;
+
+    listElement.innerHTML = hasContent ? visibleItems.map((item, index) => `
+        <article class="guest-personal-media-item ${item.kind === "video" ? "is-video" : "is-photo"}">
+            <button class="guest-personal-media-visual" type="button" data-guest-action="open-personal-media" data-guest-media-index="${pagination.startIndex + index}" aria-label="Abrir contenido">
+                ${item.kind === "video" ? `
+                    <video class="guest-personal-media-thumb" src="${escapeHTML(item.src)}" muted playsinline preload="metadata" aria-hidden="true"></video>
+                    <span class="guest-personal-media-play" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
+                ` : `
+                    <img class="guest-personal-media-thumb" src="${escapeHTML(item.src)}" alt="">
+                `}
+            </button>
+            <button class="guest-personal-delete-btn" type="button" data-guest-action="delete-personal-media" data-guest-media-id="${escapeHTML(item.id)}" aria-label="Eliminar contenido">
+                <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+            </button>
+        </article>
+    `).join("") : "";
+
+    emptyStateElement.hidden = hasContent;
+    listElement.hidden = !hasContent;
+
+    const paginationElement = document.getElementById("guest-personal-pagination");
+    if (paginationElement) {
+        paginationElement.hidden = !showPagination;
+
+        const pageIndicator = paginationElement.querySelector("[data-guest-role=\"page-indicator\"]");
+        const prevButton = paginationElement.querySelector("[data-guest-action=\"personal-page-prev\"]");
+        const nextButton = paginationElement.querySelector("[data-guest-action=\"personal-page-next\"]");
+
+        if (pageIndicator) {
+            pageIndicator.textContent = `${pagination.currentPage} de ${pagination.totalPages}`;
+        }
+
+        if (prevButton) {
+            prevButton.disabled = pagination.currentPage <= 1;
+        }
+
+        if (nextButton) {
+            nextButton.disabled = pagination.currentPage >= pagination.totalPages;
+        }
+    }
+}
+
+function openGuestPresentation() {
+    const profile = getStoredAccessProfile();
+    const catalog = getGuestPublicAlbums(profile);
+    const items = catalog.flatMap((album) => getGuestAlbumMediaItems(album));
+
+    if (!items.length) {
+        return;
+    }
+
+    openGuestViewer(items, 0, "Presentación");
+}
+
+function bindGuestAlbumInteractions() {
+    const photosButton = document.getElementById("guest-upload-photos-btn");
+    const videoButton = document.getElementById("guest-upload-video-btn");
+    const photosInput = document.getElementById("guest-photos-input");
+    const videoInput = document.getElementById("guest-video-input");
+    const searchInput = document.getElementById("guest-album-search");
+    const loadMoreButton = document.getElementById("guest-load-more-btn");
+    const presentationButton = document.getElementById("guest-presentation-btn");
+    const grid = document.getElementById("guest-albums-grid");
+    const personalList = document.getElementById("guest-personal-media-list");
+    const viewer = document.getElementById("guest-media-viewer");
+
+    if (photosButton && photosInput) {
+        photosButton.onclick = () => photosInput.click();
+    }
+
+    if (videoButton && videoInput) {
+        videoButton.onclick = () => videoInput.click();
+    }
+
+    if (photosInput) {
+        photosInput.onchange = (event) => {
+            addGuestPhotos(event.target.files);
+            event.target.value = "";
+        };
+    }
+
+    if (videoInput) {
+        videoInput.onchange = (event) => {
+            const file = event.target.files && event.target.files[0];
+            addGuestVideo(file);
+            event.target.value = "";
+        };
+    }
+
+    if (searchInput) {
+        searchInput.oninput = (event) => {
+            guestCenterState.searchQuery = event.target.value;
+            guestCenterState.visibleCount = 5;
+            renderAlbumsSection();
+        };
+    }
+
+    if (loadMoreButton) {
+        loadMoreButton.onclick = () => {
+            const profile = getStoredAccessProfile();
+            const totalAlbums = getGuestFilteredAlbums(guestCenterState.searchQuery, profile).length;
+
+            if (totalAlbums > 5 && guestCenterState.visibleCount >= totalAlbums) {
+                guestCenterState.visibleCount = 5;
+            } else {
+                guestCenterState.visibleCount += 5;
+            }
+
+            renderAlbumsSection();
+        };
+    }
+
+    if (personalLoadMoreButton) {
+        personalLoadMoreButton.onclick = () => {
+            const album = getOrCreateCurrentGuestAlbum();
+            const totalItems = getGuestAlbumMediaItems(album).length;
+
+            if (totalItems > 8 && guestCenterState.personalVisibleCount >= totalItems) {
+                guestCenterState.personalVisibleCount = 8;
+            } else {
+                guestCenterState.personalVisibleCount += 8;
+            }
+
+            renderAlbumsSection();
+        };
+    }
+
+    if (presentationButton) {
+        presentationButton.onclick = openGuestPresentation;
+    }
+
+    if (grid) {
+        grid.querySelectorAll("[data-guest-album-id]").forEach((card) => {
+            card.addEventListener("click", () => {
+                const albumId = card.dataset.guestAlbumId;
+                if (albumId) {
+                    openGuestMediaFromAlbum(albumId, 0);
+                }
+            });
+        });
+    }
+
+    if (personalList) {
+        personalList.querySelectorAll("[data-guest-action=\"open-personal-media\"]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const mediaIndex = Number(button.dataset.guestMediaIndex);
+                const album = getOrCreateCurrentGuestAlbum();
+                const mediaItems = getGuestAlbumMediaItems(album);
+                if (!Number.isNaN(mediaIndex) && mediaItems[mediaIndex]) {
+                    openGuestViewer(mediaItems, mediaIndex, "Mi Álbum");
+                }
+            });
+        });
+
+        personalList.querySelectorAll("[data-guest-action=\"delete-personal-media\"]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const mediaId = button.dataset.guestMediaId;
+                if (mediaId) {
+                    removeGuestMedia(mediaId);
+                }
+            });
+        });
+    }
+
+    if (viewer) {
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        viewer.querySelectorAll("[data-guest-action]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const action = button.dataset.guestAction;
+
+                if (action === "close-viewer") {
+                    closeGuestViewer();
+                } else if (action === "previous") {
+                    moveGuestViewer(-1);
+                } else if (action === "next") {
+                    moveGuestViewer(1);
+                } else if (action === "select-viewer-item") {
+                    const mediaIndex = Number(button.dataset.guestMediaIndex);
+                    if (!Number.isNaN(mediaIndex)) {
+                        guestCenterState.viewer.index = mediaIndex;
+                        renderAlbumsSection();
+                    }
+                }
+            });
+        });
+
+        viewer.addEventListener("touchstart", (event) => {
+            const touch = event.touches[0];
+            if (!touch) {
+                return;
+            }
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+        }, { passive: true });
+
+        viewer.addEventListener("touchend", (event) => {
+            const touch = event.changedTouches[0];
+            if (!touch) {
+                return;
+            }
+
+            const deltaX = touch.clientX - touchStartX;
+            const deltaY = touch.clientY - touchStartY;
+
+            if (Math.abs(deltaX) > 42 && Math.abs(deltaX) > Math.abs(deltaY)) {
+                moveGuestViewer(deltaX < 0 ? 1 : -1);
+            }
+        }, { passive: true });
+    }
+}
+
+function renderGuestCenterSection(profile) {
+    const currentAlbum = getOrCreateCurrentGuestAlbum();
+    const hasContent = Boolean(currentAlbum && ((currentAlbum.photos || []).length > 0 || currentAlbum.video));
+    const albumTitle = profile && profile.type === "guest" && profile.name ? `Mi Álbum - ${profile.name}` : "Mi Álbum";
+    const albumDescription = hasContent
+        ? "Tus recuerdos ya están guardados en este álbum."
+        : "Sumá fotografías y un video para armar tu álbum personal.";
+    const personalItems = currentAlbum ? getGuestAlbumMediaItems(currentAlbum) : [];
+    const showPersonalLoadMore = hasContent && personalItems.length > 8;
+    const personalLoadMoreLabel = guestCenterState.personalVisibleCount >= personalItems.length ? "Ver menos" : "Ver más";
+    const catalog = getGuestFilteredAlbums(guestCenterState.searchQuery, profile);
+    const visibleCatalog = catalog.slice(0, guestCenterState.visibleCount);
+    const shouldShowLoadMore = catalog.length > 5 && visibleCatalog.length > 0;
+    const loadMoreLabel = guestCenterState.visibleCount >= catalog.length ? "Ver menos" : "Ver más";
+    const albumSummary = catalog.length ? `${visibleCatalog.length} de ${catalog.length}` : "0 de 0";
+    const albumAccentClasses = ["accent-rose", "accent-lavender", "accent-sand", "accent-plum"];
+
+    return `
+        <div class="recuerdos-section-copy">
+            <p class="recuerdos-section-kicker">Álbumes</p>
+            <h2>Centro de Recuerdos</h2>
+            <p>Tu álbum personal convive con otros álbumes guardados en este dispositivo.</p>
+        </div>
+
+        <div class="albums-layout">
+            <article class="center-my-album-card guest-my-album-card">
+                <i class="fa-solid fa-folder-open center-my-album-icon" aria-hidden="true"></i>
+                <h3 id="personal-album-title">${escapeHTML(albumTitle)}</h3>
+                <p id="personal-album-description" class="personal-album-description">${escapeHTML(albumDescription)}</p>
+
+                <div class="center-my-album-actions" aria-label="Acciones del álbum personal">
+                    <button id="guest-upload-photos-btn" class="btn-rectangular" type="button">Subir fotografías</button>
+                    <button id="guest-upload-video-btn" class="btn-rectangular btn-secundario" type="button">Subir video</button>
+                </div>
+
+                <input id="guest-photos-input" type="file" accept="image/*" multiple hidden>
+                <input id="guest-video-input" type="file" accept="video/*" hidden>
+
+                <div class="guest-personal-album-media">
+                    <div id="guest-personal-empty-state" class="album-empty-state" ${hasContent ? "hidden" : ""}>
+                        <i class="fa-solid fa-photo-film album-empty-icon" aria-hidden="true"></i>
+                        <h3>Tu álbum está esperando recuerdos</h3>
+                        <p>Sumá fotografías y un video para verlo completo.</p>
+                    </div>
+
+                    <div id="guest-personal-media-list" class="guest-personal-media-list" aria-live="polite"></div>
+                    <button id="guest-personal-load-more-btn" class="btn-rectangular center-more-btn" type="button"${showPersonalLoadMore ? "" : " hidden"}>${personalLoadMoreLabel}</button>
+                </div>
+            </article>
+
+            <aside class="guest-albums">
+                <div class="guest-albums-header">
+                    <div class="guest-albums-heading">
+                        <i class="fa-solid fa-folder-open guest-albums-heading-icon" aria-hidden="true"></i>
+                        <h3>Explorar álbumes</h3>
+                    </div>
+                    <div class="guest-albums-toolbar">
+                        <label class="guest-search-field" for="guest-album-search">
+                            <span>Buscar por nombre</span>
+                            <input id="guest-album-search" type="search" autocomplete="off" placeholder="Escribí un nombre para explorar" value="${escapeHTML(guestCenterState.searchQuery)}">
+                        </label>
+
+                        <div class="guest-albums-summary" id="guest-albums-summary">${escapeHTML(albumSummary)}</div>
+                    </div>
+                </div>
+
+                <div id="guest-albums-grid" class="guest-albums-grid" aria-live="polite">
+                    ${visibleCatalog.map((album, index) => {
+                        const accentClass = album.accentClass || albumAccentClasses[index % albumAccentClasses.length];
+                        return `
+                            <button class="guest-album-item ${escapeHTML(accentClass)}" type="button" data-guest-album-id="${escapeHTML(album.id)}">
+                                <span class="guest-album-initials" aria-hidden="true">
+                                    <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+                                </span>
+                                <span class="guest-album-name">${escapeHTML(album.ownerName)}</span>
+                            </button>
+                        `;
+                    }).join("")}
+                </div>
+
+                <button id="guest-load-more-btn" class="btn-rectangular center-more-btn" type="button"${shouldShowLoadMore ? "" : " hidden"}>${loadMoreLabel}</button>
+            </aside>
+        </div>
+
+        ${renderGuestViewer()}
+    `;
+}
+
 renderRecuerdosAppShell();
 renderAccessModalShell();
 initializeAccessFlow();
 initializeToastInteractions();
 renderAll();
+
+function renderGuestPersonalAlbumPreview() {
+    const titleElement = document.getElementById("personal-album-title");
+    const descriptionElement = document.getElementById("personal-album-description");
+    const listElement = document.getElementById("guest-personal-media-list");
+    const emptyStateElement = document.getElementById("guest-personal-empty-state");
+    const profile = getStoredAccessProfile();
+    const album = getOrCreateCurrentGuestAlbum();
+
+    if (!titleElement || !descriptionElement || !listElement || !emptyStateElement) {
+        return;
+    }
+
+    const isGuest = profile && profile.type === "guest" && profile.name;
+    const photoCount = album ? (album.photos || []).length : 0;
+    const hasVideo = Boolean(album && album.video);
+    const hasContent = Boolean(photoCount || hasVideo);
+
+    titleElement.textContent = isGuest ? `Mi Álbum - ${profile.name}` : "Mi Álbum";
+    descriptionElement.textContent = hasContent
+        ? "Tus recuerdos ya están guardados en este álbum."
+        : "Sumá fotografías y un video para armar tu álbum personal.";
+    descriptionElement.hidden = !hasContent;
+
+    const items = [
+        ...(album && album.photos ? album.photos.map((photo, index) => ({
+            ...normalizeGuestMediaItem(photo, "photo"),
+            displayName: photo.name || `Foto ${index + 1}`
+        })) : []),
+        ...(album && album.video ? [{
+            ...normalizeGuestMediaItem(album.video, "video"),
+            displayName: album.video.name || "Video"
+        }] : [])
+    ];
+
+    const pagination = getGuestPaginationWindow(items, guestCenterState.personalPage, 10);
+    guestCenterState.personalPage = pagination.currentPage;
+    const visibleItems = pagination.items;
+    const showPagination = hasContent && pagination.totalItems > 10;
+
+    listElement.innerHTML = hasContent ? visibleItems.map((item, index) => `
+        <article class="guest-personal-media-item ${item.kind === "video" ? "is-video" : "is-photo"}">
+            <button class="guest-personal-media-visual" type="button" data-guest-action="open-personal-media" data-guest-media-index="${pagination.startIndex + index}" aria-label="Abrir contenido">
+                ${item.kind === "video" ? `
+                    <video class="guest-personal-media-thumb" src="${escapeHTML(item.src)}" muted playsinline preload="metadata" aria-hidden="true"></video>
+                    <span class="guest-personal-media-play" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
+                ` : `
+                    <img class="guest-personal-media-thumb" src="${escapeHTML(item.src)}" alt="">
+                `}
+            </button>
+            <button class="guest-personal-delete-btn" type="button" data-guest-action="delete-personal-media" data-guest-media-id="${escapeHTML(item.id)}" aria-label="Eliminar contenido">
+                <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+            </button>
+        </article>
+    `).join("") : "";
+
+    emptyStateElement.hidden = hasContent;
+    listElement.hidden = !hasContent;
+
+    const paginationElement = document.getElementById("guest-personal-pagination");
+    if (paginationElement) {
+        paginationElement.hidden = !showPagination;
+
+        const pageIndicator = paginationElement.querySelector("[data-guest-role=\"page-indicator\"]");
+        const prevButton = paginationElement.querySelector("[data-guest-action=\"personal-page-prev\"]");
+        const nextButton = paginationElement.querySelector("[data-guest-action=\"personal-page-next\"]");
+
+        if (pageIndicator) {
+            pageIndicator.textContent = `${pagination.currentPage} de ${pagination.totalPages}`;
+        }
+
+        if (prevButton) {
+            prevButton.disabled = pagination.currentPage <= 1;
+        }
+
+        if (nextButton) {
+            nextButton.disabled = pagination.currentPage >= pagination.totalPages;
+        }
+    }
+}
+
+function openGuestPresentation() {
+    const profile = getStoredAccessProfile();
+    const catalog = getGuestPublicAlbums(profile);
+    const items = catalog.flatMap((album) => getGuestAlbumMediaItems(album));
+
+    if (!items.length) {
+        return;
+    }
+
+    openGuestViewer(items, 0, "Presentación");
+}
+
+function bindGuestAlbumInteractions() {
+    const photosButton = document.getElementById("guest-upload-photos-btn");
+    const videoButton = document.getElementById("guest-upload-video-btn");
+    const photosInput = document.getElementById("guest-photos-input");
+    const videoInput = document.getElementById("guest-video-input");
+    const searchInput = document.getElementById("guest-album-search");
+    const tooltipButtons = document.querySelectorAll("[data-guest-action=\"toggle-upload-info\"]");
+    const presentationButton = document.getElementById("guest-presentation-btn");
+    const grid = document.getElementById("guest-albums-grid");
+    const personalList = document.getElementById("guest-personal-media-list");
+    const viewer = document.getElementById("guest-media-viewer");
+    const albumsPagination = document.getElementById("guest-albums-pagination");
+    const personalPagination = document.getElementById("guest-personal-pagination");
+
+    if (photosButton && photosInput) {
+        photosButton.onclick = () => photosInput.click();
+    }
+
+    if (videoButton && videoInput) {
+        videoButton.onclick = () => videoInput.click();
+    }
+
+    if (photosInput) {
+        photosInput.onchange = (event) => {
+            addGuestPhotos(event.target.files);
+            event.target.value = "";
+        };
+    }
+
+    if (videoInput) {
+        videoInput.onchange = (event) => {
+            const file = event.target.files && event.target.files[0];
+            addGuestVideo(file);
+            event.target.value = "";
+        };
+    }
+
+    if (tooltipButtons.length) {
+        tooltipButtons.forEach((button) => {
+            button.addEventListener("click", (event) => {
+                event.preventDefault();
+
+                const host = button.closest(".guest-upload-action");
+
+                tooltipButtons.forEach((otherButton) => {
+                    const otherHost = otherButton.closest(".guest-upload-action");
+                    if (otherHost && otherHost !== host) {
+                        otherHost.classList.remove("is-tooltip-open");
+                        otherButton.setAttribute("aria-expanded", "false");
+                    }
+                });
+
+                if (host) {
+                    const isOpen = host.classList.toggle("is-tooltip-open");
+                    button.setAttribute("aria-expanded", isOpen ? "true" : "false");
+                }
+            });
+        });
+    }
+
+    if (searchInput) {
+        searchInput.oninput = (event) => {
+            guestCenterState.searchQuery = event.target.value;
+            guestCenterState.albumsPage = 1;
+            renderAlbumsSection();
+        };
+    }
+
+    if (albumsPagination) {
+        const prevButton = albumsPagination.querySelector("[data-guest-action=\"albums-page-prev\"]");
+        const nextButton = albumsPagination.querySelector("[data-guest-action=\"albums-page-next\"]");
+
+        if (prevButton) {
+            prevButton.onclick = () => {
+                if (guestCenterState.albumsPage > 1) {
+                    guestCenterState.albumsPage -= 1;
+                    renderAlbumsSection();
+                }
+            };
+        }
+
+        if (nextButton) {
+            nextButton.onclick = () => {
+                const totalAlbums = getGuestFilteredAlbums(guestCenterState.searchQuery, getStoredAccessProfile()).length;
+                const totalPages = Math.max(1, Math.ceil(totalAlbums / 10));
+
+                if (guestCenterState.albumsPage < totalPages) {
+                    guestCenterState.albumsPage += 1;
+                    renderAlbumsSection();
+                }
+            };
+        }
+    }
+
+    if (personalPagination) {
+        const prevButton = personalPagination.querySelector("[data-guest-action=\"personal-page-prev\"]");
+        const nextButton = personalPagination.querySelector("[data-guest-action=\"personal-page-next\"]");
+
+        if (prevButton) {
+            prevButton.onclick = () => {
+                if (guestCenterState.personalPage > 1) {
+                    guestCenterState.personalPage -= 1;
+                    renderAlbumsSection();
+                }
+            };
+        }
+
+        if (nextButton) {
+            nextButton.onclick = () => {
+                const album = getOrCreateCurrentGuestAlbum();
+                const totalItems = getGuestAlbumMediaItems(album).length;
+                const totalPages = Math.max(1, Math.ceil(totalItems / 10));
+
+                if (guestCenterState.personalPage < totalPages) {
+                    guestCenterState.personalPage += 1;
+                    renderAlbumsSection();
+                }
+            };
+        }
+    }
+
+    if (presentationButton) {
+        presentationButton.onclick = openGuestPresentation;
+    }
+
+    if (grid) {
+        grid.querySelectorAll("[data-guest-album-id]").forEach((card) => {
+            card.addEventListener("click", () => {
+                const albumId = card.dataset.guestAlbumId;
+                if (albumId) {
+                    openGuestMediaFromAlbum(albumId, 0);
+                }
+            });
+        });
+    }
+
+    if (personalList) {
+        personalList.querySelectorAll("[data-guest-action=\"open-personal-media\"]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const mediaIndex = Number(button.dataset.guestMediaIndex);
+                const album = getOrCreateCurrentGuestAlbum();
+                const mediaItems = getGuestAlbumMediaItems(album);
+                if (!Number.isNaN(mediaIndex) && mediaItems[mediaIndex]) {
+                    openGuestViewer(mediaItems, mediaIndex, "Mi Álbum");
+                }
+            });
+        });
+
+        personalList.querySelectorAll("[data-guest-action=\"delete-personal-media\"]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const mediaId = button.dataset.guestMediaId;
+                if (mediaId) {
+                    removeGuestMedia(mediaId);
+                }
+            });
+        });
+    }
+
+    if (viewer) {
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        viewer.querySelectorAll("[data-guest-action]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const action = button.dataset.guestAction;
+
+                if (action === "close-viewer") {
+                    closeGuestViewer();
+                } else if (action === "previous") {
+                    moveGuestViewer(-1);
+                } else if (action === "next") {
+                    moveGuestViewer(1);
+                } else if (action === "select-viewer-item") {
+                    const mediaIndex = Number(button.dataset.guestMediaIndex);
+                    if (!Number.isNaN(mediaIndex)) {
+                        guestCenterState.viewer.index = mediaIndex;
+                        renderAlbumsSection();
+                    }
+                }
+            });
+        });
+
+        viewer.addEventListener("touchstart", (event) => {
+            const touch = event.touches[0];
+            if (!touch) {
+                return;
+            }
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+        }, { passive: true });
+
+        viewer.addEventListener("touchend", (event) => {
+            const touch = event.changedTouches[0];
+            if (!touch) {
+                return;
+            }
+
+            const deltaX = touch.clientX - touchStartX;
+            const deltaY = touch.clientY - touchStartY;
+
+            if (Math.abs(deltaX) > 42 && Math.abs(deltaX) > Math.abs(deltaY)) {
+                moveGuestViewer(deltaX < 0 ? 1 : -1);
+            }
+        }, { passive: true });
+    }
+}
+
+function renderGuestCenterSection(profile) {
+    const currentAlbum = getOrCreateCurrentGuestAlbum();
+    const hasContent = Boolean(currentAlbum && ((currentAlbum.photos || []).length > 0 || currentAlbum.video));
+    const albumTitle = profile && profile.type === "guest" && profile.name ? `Mi Álbum - ${profile.name}` : "Mi Álbum";
+    const albumDescription = hasContent
+        ? "Tus recuerdos ya están guardados en este álbum."
+        : "Sumá fotografías y un video para armar tu álbum personal.";
+    const personalItems = currentAlbum ? getGuestAlbumMediaItems(currentAlbum) : [];
+    const personalPagination = getGuestPaginationWindow(personalItems, guestCenterState.personalPage, 10);
+    guestCenterState.personalPage = personalPagination.currentPage;
+    const showPersonalPagination = hasContent && personalPagination.totalItems > 10;
+    const catalog = getGuestFilteredAlbums(guestCenterState.searchQuery, profile);
+    const albumsPagination = getGuestPaginationWindow(catalog, guestCenterState.albumsPage, 10);
+    guestCenterState.albumsPage = albumsPagination.currentPage;
+    const albumSummary = catalog.length ? `${albumsPagination.currentPage} de ${albumsPagination.totalPages}` : "0 de 0";
+    const albumAccentClasses = ["accent-rose", "accent-lavender", "accent-sand", "accent-plum"];
+
+    return `
+        <div class="recuerdos-section-copy">
+            <p class="recuerdos-section-kicker">Álbumes</p>
+            <h2>Centro de Recuerdos</h2>
+            <p>Tu álbum personal convive con otros álbumes guardados en este dispositivo.</p>
+        </div>
+
+        <div class="albums-layout">
+            <article class="center-my-album-card guest-my-album-card">
+                <i class="fa-solid fa-folder-open center-my-album-icon" aria-hidden="true"></i>
+                <h3 id="personal-album-title">${escapeHTML(albumTitle)}</h3>
+                <p id="personal-album-description" class="personal-album-description">${escapeHTML(albumDescription)}</p>
+
+                <div class="center-my-album-actions guest-upload-actions" aria-label="Acciones del álbum personal">
+                    <div class="guest-upload-action">
+                        <button id="guest-upload-photos-btn" class="btn-rectangular" type="button">Subir fotografías</button>
+                        <button class="guest-upload-info-btn" type="button" data-guest-action="toggle-upload-info" data-guest-info="photos" aria-label="Información sobre fotografías" aria-expanded="false">
+                            <span aria-hidden="true">ⓘ</span>
+                        </button>
+                        <span class="guest-upload-tooltip" role="tooltip">Podés seleccionar hasta 20 fotografías por carga.</span>
+                    </div>
+                    <div class="guest-upload-action">
+                        <button id="guest-upload-video-btn" class="btn-rectangular btn-secundario" type="button">Subir video</button>
+                        <button class="guest-upload-info-btn" type="button" data-guest-action="toggle-upload-info" data-guest-info="video" aria-label="Información sobre video" aria-expanded="false">
+                            <span aria-hidden="true">ⓘ</span>
+                        </button>
+                        <span class="guest-upload-tooltip" role="tooltip">Podés subir un video por vez. Tamaño máximo: 100 MB.</span>
+                    </div>
+                </div>
+
+                <input id="guest-photos-input" type="file" accept="image/*" multiple hidden>
+                <input id="guest-video-input" type="file" accept="video/*" hidden>
+
+                <div class="guest-personal-album-media">
+                    <div id="guest-personal-empty-state" class="album-empty-state guest-empty-album-card" ${hasContent ? "hidden" : ""}>
+                        <i class="fa-solid fa-photo-film guest-empty-album-icon" aria-hidden="true"></i>
+                        <h3>Tu álbum está esperando recuerdos</h3>
+                        <p>Sumá fotografías para empezar a guardar recuerdos en este álbum.</p>
+                    </div>
+
+                    <div id="guest-personal-media-list" class="guest-personal-media-list" aria-live="polite"></div>
+                    <div id="guest-personal-pagination" class="guest-pagination" ${showPersonalPagination ? "" : "hidden"}>
+                        <button class="guest-pagination-btn" type="button" data-guest-action="personal-page-prev" aria-label="Página anterior">Anterior</button>
+                        <span class="guest-pagination-label" data-guest-role="page-indicator">${personalPagination.currentPage} de ${personalPagination.totalPages}</span>
+                        <button class="guest-pagination-btn" type="button" data-guest-action="personal-page-next" aria-label="Página siguiente">Siguiente</button>
+                    </div>
+                </div>
+            </article>
+
+            <aside class="guest-albums">
+                <div class="guest-albums-header">
+                    <i class="fa-solid fa-folder-open guest-albums-heading-icon" aria-hidden="true"></i>
+                    <h3>Explorar álbumes</h3>
+                    <div class="guest-albums-toolbar">
+                        <label class="guest-search-field" for="guest-album-search">
+                            <span>Buscar por nombre</span>
+                            <input id="guest-album-search" type="search" autocomplete="off" placeholder="Escribí un nombre para explorar" value="${escapeHTML(guestCenterState.searchQuery)}">
+                        </label>
+
+                        <div class="guest-albums-summary" id="guest-albums-summary">${escapeHTML(albumSummary)}</div>
+                    </div>
+                </div>
+
+                <div id="guest-albums-grid" class="guest-albums-grid" aria-live="polite">
+                    ${albumsPagination.items.map((album, index) => {
+                        const accentClass = album.accentClass || albumAccentClasses[index % albumAccentClasses.length];
+                        return `
+                            <button class="guest-album-item ${escapeHTML(accentClass)}" type="button" data-guest-album-id="${escapeHTML(album.id)}">
+                                <span class="guest-album-initials" aria-hidden="true">
+                                    <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+                                </span>
+                                <span class="guest-album-name">${escapeHTML(album.ownerName)}</span>
+                            </button>
+                        `;
+                    }).join("")}
+                </div>
+
+                <div id="guest-albums-pagination" class="guest-pagination" ${albumsPagination.totalPages > 1 ? "" : "hidden"}>
+                    <button class="guest-pagination-btn" type="button" data-guest-action="albums-page-prev" aria-label="Página anterior">Anterior</button>
+                    <span class="guest-pagination-label" data-guest-role="page-indicator">${albumsPagination.currentPage} de ${albumsPagination.totalPages}</span>
+                    <button class="guest-pagination-btn" type="button" data-guest-action="albums-page-next" aria-label="Página siguiente">Siguiente</button>
+                </div>
+            </aside>
+        </div>
+
+        ${renderGuestViewer()}
+    `;
+}

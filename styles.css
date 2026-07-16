@@ -889,6 +889,290 @@ button, a {
     color: #8f6cbf;
 }
 
+.official-photos-lead {
+    max-width: 40rem;
+    margin: 0 auto 0.6rem;
+    color: #4f4656;
+    font-size: 1.08rem;
+    font-style: italic;
+    line-height: 1.75;
+}
+
+.official-photos-note {
+    max-width: 42rem;
+    margin: 0 auto 1.35rem;
+    color: #5b5160;
+    font-size: 0.98rem;
+    font-style: italic;
+    line-height: 1.7;
+}
+
+.official-photos-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 0 auto 1.25rem;
+}
+
+.official-photos-actions[hidden] {
+    display: none;
+}
+
+.official-photos-actions-empty {
+    margin-top: 1.25rem;
+}
+
+.official-album-shell {
+    max-width: 60rem;
+    margin: 0 auto;
+}
+
+.official-album-empty-state {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    border-radius: 28px;
+    border: 0.0625rem solid rgba(197, 160, 89, 0.18);
+    background: rgba(255, 255, 255, 0.75);
+    box-shadow: 0 0.9rem 2rem rgba(0, 0, 0, 0.06);
+    text-align: center;
+}
+
+.official-album-empty-state h3 {
+    font-size: 1.55rem;
+    margin-bottom: 0.65rem;
+}
+
+.official-album-empty-state p {
+    color: #555;
+    font-size: 0.96rem;
+    line-height: 1.7;
+    max-width: 34rem;
+    margin: 0 auto;
+}
+
+.official-gallery-shell {
+    display: grid;
+    gap: 0.6rem;
+    max-width: 60rem;
+    margin: 0 auto;
+}
+
+.official-gallery-main {
+    appearance: none;
+    display: block;
+    width: 100%;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    text-align: left;
+}
+
+.official-gallery-main:focus-visible,
+.official-gallery-thumb:focus-visible,
+.official-admin-delete-btn:focus-visible,
+.official-lightbox-close:focus-visible,
+.official-lightbox-nav:focus-visible {
+    outline: 0.2rem solid rgba(197, 160, 89, 0.45);
+    outline-offset: 0.2rem;
+}
+
+.official-gallery-main-image {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    max-height: min(44vh, 24rem);
+    object-fit: contain;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(197, 161, 230, 0.14));
+    border-radius: 24px;
+    border: 0.0625rem solid rgba(197, 160, 89, 0.16);
+    box-shadow: 0 0.85rem 1.6rem rgba(0, 0, 0, 0.07);
+}
+
+.official-gallery-thumbs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(4.25rem, 1fr));
+    gap: 0.5rem;
+}
+
+.official-gallery-thumb {
+    appearance: none;
+    border: 0.125rem solid transparent;
+    border-radius: 16px;
+    overflow: hidden;
+    padding: 0;
+    background: rgba(255, 255, 255, 0.72);
+    box-shadow: 0 0.3rem 0.8rem rgba(0, 0, 0, 0.05);
+}
+
+.official-gallery-thumb img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+}
+
+.official-gallery-thumb.is-active {
+    border-color: var(--color-dorado);
+    box-shadow: 0 0.6rem 1.1rem rgba(197, 160, 89, 0.16);
+    transform: translateY(-1px);
+}
+
+.official-admin-panel {
+    max-width: 72rem;
+    margin: 1rem auto 0;
+    padding: 1.15rem;
+    border-radius: 24px;
+    border: 0.0625rem solid rgba(197, 160, 89, 0.18);
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.06);
+}
+
+.official-admin-panel-head {
+    max-width: 36rem;
+    margin: 0 auto 0.85rem;
+    text-align: center;
+}
+
+.official-admin-panel-head h3 {
+    font-size: 1.6rem;
+    margin-bottom: 0.35rem;
+}
+
+.official-admin-panel-head p {
+    color: #555;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+.official-admin-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.official-admin-card {
+    overflow: hidden;
+    border-radius: 18px;
+    border: 0.0625rem solid rgba(197, 160, 89, 0.14);
+    background: var(--color-blanco);
+    box-shadow: 0 0.45rem 1rem rgba(0, 0, 0, 0.05);
+}
+
+.official-admin-thumb {
+    background: linear-gradient(145deg, rgba(235, 224, 206, 0.82), rgba(197, 161, 230, 0.22));
+}
+
+.official-admin-thumb img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: contain;
+}
+
+.official-admin-copy {
+    display: grid;
+    gap: 0.45rem;
+    padding: 0.8rem;
+}
+
+.official-admin-delete-btn {
+    width: 100%;
+    margin-top: 0;
+}
+
+.official-admin-empty {
+    padding: 1.2rem 0.5rem 0.4rem;
+    text-align: center;
+    color: #555;
+    font-style: italic;
+}
+
+.official-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 1600;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: rgba(20, 10, 30, 0.78);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.official-lightbox-backdrop {
+    position: absolute;
+    inset: 0;
+}
+
+.official-lightbox-panel {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 72rem);
+    max-height: calc(100vh - 2rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.official-lightbox-figure {
+    width: 100%;
+    max-width: 64rem;
+    margin: 0;
+    display: grid;
+    gap: 0.8rem;
+    text-align: center;
+    color: var(--color-blanco);
+}
+
+.official-lightbox-image {
+    width: 100%;
+    max-height: calc(100vh - 8rem);
+    object-fit: contain;
+    display: block;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 1.25rem 2.8rem rgba(0, 0, 0, 0.28);
+}
+
+.official-lightbox-close,
+.official-lightbox-nav {
+    position: absolute;
+    border: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-blanco);
+    background: rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.official-lightbox-close {
+    top: -0.25rem;
+    right: 0;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 999px;
+}
+
+.official-lightbox-nav {
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3rem;
+    height: 3rem;
+    border-radius: 999px;
+}
+
+.official-lightbox-prev {
+    left: 0;
+}
+
+.official-lightbox-next {
+    right: 0;
+}
+
 .official-album-panel {
     max-width: 72rem;
     margin: 2rem auto 0 auto;
@@ -1511,6 +1795,10 @@ button, a {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .official-admin-grid {
+        grid-template-columns: 1fr;
+    }
+
     .official-album-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -1518,6 +1806,15 @@ button, a {
     .official-album-card.is-featured {
         grid-column: span 2;
         grid-row: auto;
+    }
+
+    .official-lightbox-panel {
+        padding-inline: 2.5rem;
+    }
+
+    .official-lightbox-nav {
+        width: 2.7rem;
+        height: 2.7rem;
     }
 
     .recuerdos-page-layout-guest {
@@ -1573,6 +1870,51 @@ button, a {
 
     .personal-album-media-list {
         grid-template-columns: 1fr;
+    }
+
+    .official-photos-lead {
+        font-size: 1rem;
+    }
+
+    .official-photos-note {
+        font-size: 0.92rem;
+    }
+
+    .official-gallery-main-image {
+        max-height: 38vh;
+    }
+
+    .official-gallery-thumbs {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .official-admin-panel {
+        padding: 1.1rem;
+    }
+
+    .official-lightbox {
+        padding: 0.75rem;
+    }
+
+    .official-lightbox-panel {
+        width: 100%;
+        padding-inline: 2.2rem;
+    }
+
+    .official-lightbox-image {
+        max-height: calc(100vh - 7rem);
+        border-radius: 22px;
+    }
+
+    .official-lightbox-close {
+        top: -0.15rem;
+        width: 2.4rem;
+        height: 2.4rem;
+    }
+
+    .official-lightbox-nav {
+        width: 2.4rem;
+        height: 2.4rem;
     }
 
     .official-album-panel {
