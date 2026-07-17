@@ -3511,6 +3511,15 @@ async function loadGuestAlbumsFromFirebase(force = false) {
 
         saveStoredGuestAlbums(guestAlbums);
 
+        const profile = getStoredAccessProfile();
+        if (profile && profile.type === "guest" && profile.name) {
+            const myRealAlbum = guestAlbums.find((a) => a.ownerUserId === profile.userId || a.ownerName === profile.name);
+            if (myRealAlbum && profile.albumId !== myRealAlbum.id) {
+                profile.albumId = myRealAlbum.id;
+                saveAccessProfile(profile);
+            }
+        }
+
         guestCenterState.firebaseLoaded = true;
         guestCenterState.firebaseLoading = false;
         renderAlbumsSection();
@@ -3924,6 +3933,16 @@ function renderGuestPersonalAlbumPreview() {
 
     if (!titleElement || !descriptionElement || !listElement || !emptyStateElement) {
         return;
+    }
+
+    if (album && album.id && album.photoCount > 0 && (!album.photos || album.photos.length === 0)) {
+        if (!album.loadingPhotos) {
+            album.loadingPhotos = true;
+            void loadGuestAlbumPhotosIfNeeded(album.id).then(() => {
+                album.loadingPhotos = false;
+                renderAlbumsSection();
+            });
+        }
     }
 
     const isGuest = profile && profile.type === "guest" && profile.name;
