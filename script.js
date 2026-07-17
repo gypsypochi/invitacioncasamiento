@@ -44,10 +44,6 @@ const eventConfig = {
         alias: "COLOR.COATI.YERBA",
         holder: "Jorge A. Claros"
     },
-    access: {
-        eventCode: "MARCELA-JORGE-2026",
-        adminCode: "NOVIOS-2026"
-    },
     musicPlaylist: [
         {
             title: "Unchained Melody",
@@ -55,20 +51,22 @@ const eventConfig = {
             duration: "03:36",
             file: "assets/audio/unchained-melody.mp3"
         }
-    ],
-    albumTemplates: {
-        guestAlbumType: "guest",
-        officialAlbumType: "official"
-    }
+    ]
 };
 
 // --- 2. APLICACIÓN DE LA CONFIGURACIÓN EN LA PÁGINA ---
 function setText(id, value) {
-    document.getElementById(id).textContent = value;
+    const element = document.getElementById(id);
+    if (element) {
+        element.textContent = value;
+    }
 }
 
 function setHref(id, value) {
-    document.getElementById(id).href = value;
+    const element = document.getElementById(id);
+    if (element) {
+        element.href = value;
+    }
 }
 
 function applyEventConfig() {
@@ -114,143 +112,7 @@ function applyEventConfig() {
 
 applyEventConfig();
 
-// --- 3. FLUJO LOCAL DE INGRESO AL CENTRO DE RECUERDOS ---
-const accessStorageKey = "centroRecuerdosAccess";
-const albumStorageKey = "centroRecuerdosAlbums";
-
-function getStoredAccessProfile() {
-    const storedProfile = localStorage.getItem(accessStorageKey);
-    return storedProfile ? JSON.parse(storedProfile) : null;
-}
-
-function saveAccessProfile(profile) {
-    localStorage.setItem(accessStorageKey, JSON.stringify(profile));
-}
-
-function getStoredAlbums() {
-    const storedAlbums = localStorage.getItem(albumStorageKey);
-    return storedAlbums ? JSON.parse(storedAlbums) : [];
-}
-
-function saveAlbums(albums) {
-    localStorage.setItem(albumStorageKey, JSON.stringify(albums));
-}
-
-function createPersonalAlbum(guestName) {
-    const normalizedName = guestName.trim();
-    const albums = getStoredAlbums();
-    const albumTitle = "Fotos de " + normalizedName;
-    const existingAlbum = albums.find((album) => album.ownerName === normalizedName && album.type === eventConfig.albumTemplates.guestAlbumType);
-
-    if (existingAlbum) {
-        return existingAlbum;
-    }
-
-    const newAlbum = {
-        id: "guest-" + Date.now(),
-        type: eventConfig.albumTemplates.guestAlbumType,
-        title: albumTitle,
-        ownerName: normalizedName,
-        visible: false,
-        photos: [],
-        video: null,
-        createdAt: new Date().toISOString()
-    };
-
-    albums.push(newAlbum);
-    saveAlbums(albums);
-    return newAlbum;
-}
-
-function closeAccessModal() {
-    document.getElementById("access-modal").hidden = true;
-    document.body.classList.remove("modal-open");
-}
-
-function showAccessFeedback(message) {
-    document.getElementById("access-feedback").textContent = message;
-}
-
-function setAccessMode(mode) {
-    const isGuestMode = mode === "guest";
-
-    document.getElementById("guest-access-option").classList.toggle("active", isGuestMode);
-    document.getElementById("admin-access-option").classList.toggle("active", !isGuestMode);
-    document.getElementById("guest-access-form").hidden = !isGuestMode;
-    document.getElementById("admin-access-form").hidden = isGuestMode;
-    showAccessFeedback("");
-}
-
-function updateGuestGreeting() {
-    const profile = getStoredAccessProfile();
-    const greetingElement = document.getElementById("guest-greeting");
-    if (profile && profile.type === "guest" && profile.name) {
-        greetingElement.innerHTML = `Hola, ${profile.name} <i class="fa-solid fa-heart" style="color: var(--color-dorado); font-size: 0.8em; margin-left: 0.3rem;"></i>`;
-        greetingElement.hidden = false;
-    } else {
-        greetingElement.hidden = true;
-    }
-}
-
-function handleGuestAccess(event) {
-    event.preventDefault();
-
-    const guestName = document.getElementById("guest-name").value.trim();
-    const eventCode = document.getElementById("event-code").value.trim();
-
-    if (!guestName || eventCode !== eventConfig.access.eventCode) {
-        showAccessFeedback("Revisá tu nombre y el código del evento para ingresar.");
-        return;
-    }
-
-    const profile = {
-        name: guestName,
-        type: "guest",
-        enteredAt: new Date().toISOString()
-    };
-
-    saveAccessProfile(profile);
-    createPersonalAlbum(guestName);
-    updateGuestGreeting();
-    closeAccessModal();
-}
-
-function handleAdminAccess(event) {
-    event.preventDefault();
-
-    const adminCode = document.getElementById("admin-code").value.trim();
-
-    if (adminCode !== eventConfig.access.adminCode) {
-        showAccessFeedback("Revisá el código administrador para ingresar.");
-        return;
-    }
-
-    saveAccessProfile({
-        type: "admin",
-        enteredAt: new Date().toISOString()
-    });
-    updateGuestGreeting();
-    closeAccessModal();
-}
-
-function initializeAccessFlow() {
-    updateGuestGreeting();
-
-    if (getStoredAccessProfile()) {
-        closeAccessModal();
-        return;
-    }
-
-    document.body.classList.add("modal-open");
-    document.getElementById("guest-access-option").addEventListener("click", () => setAccessMode("guest"));
-    document.getElementById("admin-access-option").addEventListener("click", () => setAccessMode("admin"));
-    document.getElementById("guest-access-form").addEventListener("submit", handleGuestAccess);
-    document.getElementById("admin-access-form").addEventListener("submit", handleAdminAccess);
-}
-
-initializeAccessFlow();
-
-// --- 4. LÓGICA DE LA CUENTA REGRESIVA ---
+// --- 3. CUENTA REGRESIVA ---
 const fechaBoda = new Date(eventConfig.event.dateTime).getTime();
 let intervalo;
 
@@ -259,10 +121,17 @@ function formatTime(value) {
 }
 
 function showPostEventContent() {
-    document.getElementById("post-event-message").hidden = false;
+    const postEventMessage = document.getElementById("post-event-message");
     const previewSection = document.getElementById("centro-recuerdos-preview");
-    previewSection.hidden = false;
-    previewSection.classList.add("fade-in");
+
+    if (postEventMessage) {
+        postEventMessage.hidden = false;
+    }
+
+    if (previewSection) {
+        previewSection.hidden = false;
+        previewSection.classList.add("fade-in");
+    }
 }
 
 function updateCountdown() {
@@ -293,7 +162,7 @@ if (updateCountdown()) {
     intervalo = setInterval(updateCountdown, 1000);
 }
 
-// --- 5. LÓGICA DEL REPRODUCTOR DE MÚSICA (CON PLAYLIST Y CONTROLES) ---
+// --- 4. REPRODUCTOR DE MÚSICA ---
 const audio = document.getElementById("bg-music");
 const playBtn = document.getElementById("play-music-btn");
 const prevBtn = document.getElementById("player-prev-btn");
@@ -308,19 +177,31 @@ let isPlaying = false;
 
 function loadTrack(index) {
     const track = eventConfig.musicPlaylist[index];
+    if (!audio || !trackTitle || !trackArtist) {
+        return;
+    }
+
     audio.src = track.file;
     trackTitle.textContent = track.title;
     trackArtist.textContent = track.artist;
 }
 
 function playTrack() {
+    if (!audio || !playBtn) {
+        return;
+    }
+
     audio.play().then(() => {
         isPlaying = true;
         playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-    }).catch(error => console.log("Error al reproducir:", error));
+    }).catch((error) => console.log("Error al reproducir:", error));
 }
 
 function pauseTrack() {
+    if (!audio || !playBtn) {
+        return;
+    }
+
     audio.pause();
     isPlaying = false;
     playBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
@@ -329,40 +210,61 @@ function pauseTrack() {
 function nextTrack() {
     currentTrackIndex = (currentTrackIndex + 1) % eventConfig.musicPlaylist.length;
     loadTrack(currentTrackIndex);
-    if (isPlaying) playTrack();
+    if (isPlaying) {
+        playTrack();
+    }
 }
 
 function prevTrack() {
     currentTrackIndex = (currentTrackIndex - 1 + eventConfig.musicPlaylist.length) % eventConfig.musicPlaylist.length;
     loadTrack(currentTrackIndex);
-    if (isPlaying) playTrack();
+    if (isPlaying) {
+        playTrack();
+    }
 }
 
-// Event Listeners
-playBtn.addEventListener("click", () => {
-    if (isPlaying) pauseTrack();
-    else playTrack();
-});
+if (playBtn) {
+    playBtn.addEventListener("click", () => {
+        if (isPlaying) {
+            pauseTrack();
+        } else {
+            playTrack();
+        }
+    });
+}
 
-prevBtn.addEventListener("click", prevTrack);
-nextBtn.addEventListener("click", nextTrack);
+if (prevBtn) {
+    prevBtn.addEventListener("click", prevTrack);
+}
 
-volumeSlider.addEventListener("input", (e) => {
-    audio.volume = e.target.value;
-    updateVolumeIcon(e.target.value);
-});
+if (nextBtn) {
+    nextBtn.addEventListener("click", nextTrack);
+}
 
-volumeIcon.addEventListener("click", () => {
-    if (audio.muted) {
-        audio.muted = false;
-        updateVolumeIcon(audio.volume);
-    } else {
-        audio.muted = true;
-        volumeIcon.className = "fa-solid fa-volume-xmark";
-    }
-});
+if (volumeSlider && audio) {
+    volumeSlider.addEventListener("input", (event) => {
+        audio.volume = event.target.value;
+        updateVolumeIcon(event.target.value);
+    });
+}
+
+if (volumeIcon && audio) {
+    volumeIcon.addEventListener("click", () => {
+        if (audio.muted) {
+            audio.muted = false;
+            updateVolumeIcon(audio.volume);
+        } else {
+            audio.muted = true;
+            volumeIcon.className = "fa-solid fa-volume-xmark";
+        }
+    });
+}
 
 function updateVolumeIcon(volume) {
+    if (!volumeIcon) {
+        return;
+    }
+
     if (volume == 0) {
         volumeIcon.className = "fa-solid fa-volume-off";
     } else if (volume < 0.5) {
@@ -372,13 +274,13 @@ function updateVolumeIcon(volume) {
     }
 }
 
-// Autoplay al primer toque
 document.body.addEventListener("click", () => {
     if (!isPlaying) {
         playTrack();
     }
 }, { once: true });
 
-// Inicializar primer track
 loadTrack(currentTrackIndex);
-audio.volume = volumeSlider.value;
+if (audio && volumeSlider) {
+    audio.volume = volumeSlider.value;
+}

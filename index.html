@@ -4,13 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invitación de casamiento</title>
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-    
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -18,40 +17,6 @@
     <audio id="bg-music" loop autoplay>
         <source src="assets/unchained melody.mp3" type="audio/mpeg">
     </audio>
-
-    <div id="access-modal" class="access-modal" role="dialog" aria-modal="true" aria-labelledby="access-modal-title">
-        <div class="access-modal-card">
-            <p class="access-modal-kicker">Centro de Recuerdos</p>
-            <h2 id="access-modal-title"><i class="fa-solid fa-heart" style="color: var(--color-dorado); font-size: 0.85em; margin-right: 0.5rem;"></i>Bienvenidos nuevamente</h2>
-            <p class="access-modal-text">Nuestro casamiento ya forma parte de nuestros recuerdos.</p>
-            <p class="access-modal-text">Elegí cómo querés ingresar para comenzar a revivir este momento junto a nosotros.</p>
-
-            <div class="access-options" aria-label="Opciones de ingreso">
-                <button id="guest-access-option" class="access-option active" type="button"><i class="fa-solid fa-users" style="margin-right: 0.5rem;"></i>Soy invitado</button>
-                <button id="admin-access-option" class="access-option" type="button"><i class="fa-solid fa-ring" style="margin-right: 0.5rem;"></i>Somos los novios</button>
-            </div>
-
-            <form id="guest-access-form" class="access-form">
-                <p class="access-form-question">¿Cómo querés que aparezca tu álbum?</p>
-                <label for="guest-name">Nombre</label>
-                <input id="guest-name" name="guest-name" type="text" autocomplete="name" required>
-
-                <label for="event-code">Código del evento</label>
-                <input id="event-code" name="event-code" type="text" autocomplete="off" required>
-
-                <button class="btn-rectangular" type="submit">Ingresar</button>
-            </form>
-
-            <form id="admin-access-form" class="access-form" hidden>
-                <label for="admin-code">Código administrador</label>
-                <input id="admin-code" name="admin-code" type="text" autocomplete="off" required>
-
-                <button class="btn-rectangular" type="submit">Ingresar como administrador</button>
-            </form>
-
-            <p id="access-feedback" class="access-feedback" aria-live="polite"></p>
-        </div>
-    </div>
 
     <header id="hero" class="section">
         <div class="hero-content">
@@ -77,7 +42,7 @@
 
     <section id="countdown-section" class="section">
         <p id="intro-text" class="intro-text"></p>
-        
+
         <div id="countdown-timer">
             <div class="time-box"><span id="dias">00</span><p>Días</p></div>
             <div class="time-box"><span id="horas">00</span><p>Horas</p></div>
@@ -92,41 +57,17 @@
         </div>
     </section>
 
-    <section id="centro-recuerdos-preview" class="section memories-preview bg-lavanda" hidden>
-        <div class="memories-header">
-            <p id="guest-greeting" class="guest-greeting" hidden></p>
-            <h2><i class="fa-solid fa-wand-magic-sparkles" style="color: var(--color-dorado); font-size: 0.8em; margin-right: 0.6rem;"></i>Reviví nuestro gran día</h2>
-            <p>Muy pronto vas a poder recorrer todos los recuerdos compartidos por familiares y amigos.</p>
-        </div>
+    <section id="centro-recuerdos-preview" class="section memories-preview bg-lavanda">
+        <div class="memories-preview-shell">
+            <div class="memories-header memories-header-simple">
+                <i class="fa-solid fa-heart memories-section-icon" aria-hidden="true"></i>
+                <h2>Centro de Recuerdos</h2>
+                <p>La invitación sigue su recorrido y el Centro de Recuerdos se abre en una página independiente.</p>
+            </div>
 
-        <div class="memories-cards">
-            <article class="memory-card" aria-disabled="true">
-                <span class="memory-card-icon" aria-hidden="true"><i class="fa-solid fa-camera"></i></span>
-                <h3>Álbumes de invitados</h3>
-                <p>Cada invitado tendrá su propio álbum para compartir sus mejores recuerdos.</p>
-                <span class="coming-soon-label">Disponible próximamente</span>
-            </article>
-
-            <article class="memory-card" aria-disabled="true">
-                <span class="memory-card-icon" aria-hidden="true"><i class="fa-solid fa-images"></i></span>
-                <h3>Álbum oficial</h3>
-                <p>Las fotografías profesionales del casamiento estarán disponibles aquí.</p>
-                <span class="coming-soon-label">Disponible próximamente</span>
-            </article>
-
-            <article class="memory-card" aria-disabled="true">
-                <span class="memory-card-icon" aria-hidden="true"><i class="fa-solid fa-comments"></i></span>
-                <h3>Mensajes</h3>
-                <p>Un espacio para dejar saludos, recuerdos y palabras para los novios.</p>
-                <span class="coming-soon-label">Disponible próximamente</span>
-            </article>
-
-            <article class="memory-card" aria-disabled="true">
-                <span class="memory-card-icon" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
-                <h3>Presentación</h3>
-                <p>Disfrutá una presentación automática con los mejores momentos del casamiento.</p>
-                <span class="coming-soon-label">Disponible próximamente</span>
-            </article>
+            <a class="recuerdos-preview-link" href="centro-recuerdos.html" aria-label="Ingresar al Centro de Recuerdos">
+                <img src="assets/img-4.png" alt="Ilustración del Centro de Recuerdos" class="recuerdos-preview-image">
+            </a>
         </div>
     </section>
 
@@ -155,7 +96,6 @@
         <h2 id="rsvp-title"></h2>
         <p id="rsvp-text"></p>
         <a id="rsvp-link" class="btn-rectangular" target="_blank"></a>
-        
         <a id="calendar-link" class="btn-rectangular btn-secundario" target="_blank"></a>
     </section>
 
