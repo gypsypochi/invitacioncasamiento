@@ -80,9 +80,9 @@ function normalizeAccessProfile(profile) {
         : (profile.displayName || profile.name || "Administrador");
     const deviceId = profile.deviceId || getOrCreateDeviceId();
     const normalizedName = normalizeDisplayName(displayName);
-    const fallbackUserId = role === "guest" ? `guest-${deviceId}-${normalizedName}` : deviceId;
+    const fallbackUserId = role === "guest" ? `guest-${normalizedName}` : deviceId;
     const currentUserId = profile.userId;
-    const isLegacyUserId = currentUserId === deviceId || currentUserId === `guest-${deviceId}`;
+    const isLegacyUserId = currentUserId === deviceId || currentUserId === `guest-${deviceId}` || (currentUserId && currentUserId.includes(`-${deviceId}-`)) || (currentUserId && currentUserId.startsWith(`guest-${deviceId}-`));
     const userId = (role === "guest" && (isLegacyUserId || !currentUserId))
         ? fallbackUserId
         : (currentUserId || fallbackUserId);
@@ -688,6 +688,10 @@ function getStoredAccessProfile() {
 function clearAccessProfile() {
     localStorage.removeItem(accessStorageKey);
     invalidateAccessSession();
+    clearPersonalAlbumContext();
+
+    guestCenterState.albums = [];
+    guestCenterState.firebaseLoaded = false;
 
     const officialAlbumState = recuerdosAppState.officialAlbum;
     officialAlbumState.guestRefreshAttempted = false;
@@ -2518,7 +2522,7 @@ function handleChangeUser() {
     renderAll();
 }
 
-function handleGuestAccess(event) {
+async function handleGuestAccess(event) {
     event.preventDefault();
 
     const guestName = document.getElementById("guest-name");
@@ -2542,7 +2546,7 @@ function handleGuestAccess(event) {
         lastSeenAt: now
     });
 
-    ensurePersonalAlbum(profile.name);
+    await resolvePersonalAlbumForSession(profile);
     updateLandingContent();
     renderAll();
     showAccessSuccess(profile);
@@ -3309,7 +3313,10 @@ const guestCenterState = {
     },
     albums: [],
     firebaseLoading: false,
-    firebaseLoaded: false
+    firebaseLoaded: false,
+    personalAlbum: null,
+    personalAlbumLoaded: false,
+    personalAlbumLoading: false
 };
 
 const adminCenterState = {
@@ -3487,7 +3494,7 @@ async function loadGuestAlbumsFromFirebase(force = false) {
 }
 
 async function loadGuestAlbumPhotosIfNeeded(albumId) {
-    const album = guestCenterState.albums.find(a => a.id === albumId);
+    const album = guestCenterState.albums.find(a => a.id === albumId) || (guestCenterState.personalAlbum && guestCenterState.personalAlbum.id === albumId ? guestCenterState.personalAlbum : null);
     if (!album) {
         return;
     }
@@ -3624,52 +3631,128 @@ async function deleteGuestVideoRemote(targetVideo, album, profile) {
     }
 }
 
-function getCurrentUserGuestAlbum() {
-    const profile = getStoredAccessProfile();
+function clearPersonalAlbumContext() {
+    guestCenterState.personalAlbum = null;
+    guestCenterState.personalAlbumLoaded = false;
+    const listElement = document.getElementById("guest-personal-media-list");
+    if (listElement) {
+        listElement.innerHTML = "";
+    }
+}
 
+async function resolvePersonalAlbumForSession(profile) {
     if (!profile || profile.type !== "guest" || !profile.name) {
+        clearPersonalAlbumContext();
         return null;
     }
 
-    const storedAlbums = getStoredGuestAlbums();
-    let album = profile.albumId ? storedAlbums.find((a) => a.id === profile.albumId) : null;
-
-    if (!album) {
-        album = storedAlbums.find((a) => a.ownerName === profile.name && a.ownerType === "guest");
+    if (guestCenterState.personalAlbumLoaded && guestCenterState.personalAlbum && guestCenterState.personalAlbum.ownerUserId === profile.userId) {
+        return guestCenterState.personalAlbum;
     }
 
-    if (!album) {
-        album = normalizeGuestAlbumRecord({
-            id: profile.albumId || generateGuestId("guest-album"),
-            ownerName: profile.name,
-            ownerType: "guest",
-            ownerUserId: profile.userId || `guest-${profile.deviceId}-${normalizeDisplayName(profile.name)}`,
-            albumType: "guest",
-            title: profile.name,
-            createdAt: new Date().toISOString(),
-            lastActivityAt: new Date().toISOString(),
-            coverPhotoId: null,
-            coverPhotoUrl: null,
-            photoCount: 0,
-            photos: [],
-            video: null,
-            videoCount: 0
-        });
-
-        storedAlbums.push(album);
-        saveStoredGuestAlbums(storedAlbums);
+    const firebaseApi = await getFirebaseGuestAlbumApi();
+    if (!firebaseApi) {
+        return null;
     }
 
-    if (profile.albumId !== album.id) {
-        profile.albumId = album.id;
-        saveAccessProfile(profile);
-    }
+    try {
+        const albumsRef = firebaseApi.collection(firebaseApi.firestore, "events", recuerdosEventId, "albums");
+        
+        const q = firebaseApi.query(
+            albumsRef,
+            firebaseApi.where("ownerUserId", "==", profile.userId)
+        );
+        const querySnapshot = await firebaseApi.getDocs(q);
 
-    return album;
+        let albumDoc = null;
+        if (!querySnapshot.empty) {
+            albumDoc = querySnapshot.docs[0];
+        } else {
+            const qName = firebaseApi.query(
+                albumsRef,
+                firebaseApi.where("ownerName", "==", profile.name),
+                firebaseApi.where("ownerType", "==", "guest")
+            );
+            const querySnapshotName = await firebaseApi.getDocs(qName);
+            if (!querySnapshotName.empty) {
+                albumDoc = querySnapshotName.docs[0];
+            }
+        }
+
+        let album = null;
+        if (albumDoc) {
+            const data = albumDoc.data();
+            album = normalizeGuestAlbumRecord({
+                id: albumDoc.id,
+                ...data
+            });
+            
+            if (album.ownerUserId !== profile.userId) {
+                album.ownerUserId = profile.userId;
+                const docRef = firebaseApi.doc(firebaseApi.firestore, "events", recuerdosEventId, "albums", album.id);
+                await firebaseApi.setDoc(docRef, { ownerUserId: profile.userId }, { merge: true });
+            }
+        } else {
+            const newAlbumId = generateGuestId("guest-album");
+            album = normalizeGuestAlbumRecord({
+                id: newAlbumId,
+                ownerName: profile.name,
+                ownerType: "guest",
+                ownerUserId: profile.userId,
+                albumType: "guest",
+                title: profile.name,
+                createdAt: new Date().toISOString(),
+                lastActivityAt: new Date().toISOString(),
+                coverPhotoId: null,
+                coverPhotoUrl: null,
+                photoCount: 0,
+                photos: [],
+                video: null,
+                videoCount: 0
+            });
+
+            const docRef = firebaseApi.doc(firebaseApi.firestore, "events", recuerdosEventId, "albums", newAlbumId);
+            await firebaseApi.setDoc(docRef, buildGuestAlbumFirestoreRecord(album, profile));
+        }
+
+        const photosCollectionRef = firebaseApi.collection(firebaseApi.firestore, "events", recuerdosEventId, "albums", album.id, "photos");
+        const photosSnapshot = await firebaseApi.getDocs(photosCollectionRef);
+        
+        album.photos = photosSnapshot.docs.map((photoDoc) => {
+            const photoData = photoDoc.data();
+            return normalizeGuestMediaItem({
+                ...photoData,
+                id: photoDoc.id,
+                src: photoData.downloadUrl || photoData.src || ""
+            }, "photo");
+        }).filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0));
+        
+        album.photoCount = album.photos.length;
+
+        if (profile.albumId !== album.id) {
+            profile.albumId = album.id;
+            saveAccessProfile(profile);
+        }
+
+        guestCenterState.personalAlbum = album;
+        guestCenterState.personalAlbumLoaded = true;
+        return album;
+    } catch (error) {
+        console.error("[Recuerdos] Error al resolver el álbum del usuario.", error);
+        return null;
+    }
+}
+
+function getCurrentUserGuestAlbum() {
+    return guestCenterState.personalAlbum;
 }
 
 function getCurrentGuestAlbum(profile = getStoredAccessProfile()) {
-    return getCurrentUserGuestAlbum();
+    return guestCenterState.personalAlbum;
+}
+
+function getOrCreateCurrentGuestAlbum() {
+    return guestCenterState.personalAlbum;
 }
 
 function getGuestPublicAlbums(profile = getStoredAccessProfile()) {
@@ -3854,76 +3937,7 @@ function updateGuestProfileAlbumId(album) {
     void syncAccessProfileWithFirestore(nextProfile);
 }
 
-function getOrCreateCurrentGuestAlbum() {
-    return getCurrentUserGuestAlbum();
-}
 
-function renderGuestPersonalAlbumPreview() {
-    const titleElement = document.getElementById("personal-album-title");
-    const descriptionElement = document.getElementById("personal-album-description");
-    const listElement = document.getElementById("guest-personal-media-list");
-    const emptyStateElement = document.getElementById("guest-personal-empty-state");
-    const profile = getStoredAccessProfile();
-    const album = getOrCreateCurrentGuestAlbum();
-
-    if (!titleElement || !descriptionElement || !listElement || !emptyStateElement) {
-        return;
-    }
-
-    if (album && album.id && album.photoCount > 0 && (!album.photos || album.photos.length === 0)) {
-        if (!album.loadingPhotos) {
-            album.loadingPhotos = true;
-            void loadGuestAlbumPhotosIfNeeded(album.id).then(() => {
-                album.loadingPhotos = false;
-                renderAlbumsSection();
-            });
-        }
-    }
-
-    const isGuest = profile && profile.type === "guest" && profile.name;
-    const photoCount = album ? (album.photos || []).length : 0;
-    const hasVideo = Boolean(album && album.video);
-    const hasContent = Boolean(photoCount || hasVideo);
-
-    titleElement.textContent = isGuest ? `Mi Álbum - ${profile.name}` : "Mi Álbum";
-    descriptionElement.textContent = hasContent
-        ? "Tus recuerdos ya están guardados en este álbum."
-        : "Sumá fotografías y un video para armar tu álbum personal.";
-
-    const items = [
-        ...(album && album.photos ? album.photos.map((photo, index) => ({
-            ...normalizeGuestMediaItem(photo, "photo"),
-            displayName: photo.name || `Foto ${index + 1}`
-        })) : []),
-        ...(album && album.video ? [{
-            ...normalizeGuestMediaItem(album.video, "video"),
-            displayName: album.video.name || "Video"
-        }] : [])
-    ];
-
-    listElement.innerHTML = hasContent ? items.map((item, index) => `
-        <article class="guest-personal-media-item ${item.kind === "video" ? "is-video" : "is-photo"}">
-            <button class="guest-personal-media-visual" type="button" data-guest-action="open-personal-media" data-guest-media-index="${index}" aria-label="Abrir ${escapeHTML(item.displayName)}">
-                ${item.kind === "video" ? `
-                    <span class="guest-personal-media-play"><i class="fa-solid fa-play" aria-hidden="true"></i></span>
-                ` : `
-                    <img src="${escapeHTML(item.src)}" alt="${escapeHTML(item.displayName)}">
-                `}
-            </button>
-            <div class="guest-personal-media-copy">
-                <p class="personal-media-kind">${item.kind === "video" ? "Video" : "Foto"}</p>
-                <h4 class="personal-media-title">${escapeHTML(item.displayName)}</h4>
-                <p class="personal-media-meta">${item.kind === "video" ? "Guardado en tu álbum" : "Guardada en tu álbum"}</p>
-            </div>
-            <button class="guest-personal-delete-btn" type="button" data-guest-action="delete-personal-media" data-guest-media-id="${escapeHTML(item.id)}" aria-label="Eliminar ${escapeHTML(item.displayName)}">
-                <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
-            </button>
-        </article>
-    `).join("") : "";
-
-    emptyStateElement.hidden = hasContent;
-    listElement.hidden = !hasContent;
-}
 
 function addGuestPhotos(files) {
     const imageFiles = Array.from(files || []).filter((file) => file && file.type && file.type.startsWith("image/"));
@@ -5842,12 +5856,21 @@ function renderAlbumsSection() {
         return;
     }
 
+    const profile = getStoredAccessProfile();
+    const isGuest = profile && profile.type === "guest" && profile.name;
+
+    if (isGuest && !guestCenterState.personalAlbumLoaded && !guestCenterState.personalAlbumLoading) {
+        guestCenterState.personalAlbumLoading = true;
+        resolvePersonalAlbumForSession(profile).then(() => {
+            guestCenterState.personalAlbumLoading = false;
+            renderAlbumsSection();
+        });
+        return;
+    }
+
     if (!guestCenterState.firebaseLoaded && !guestCenterState.firebaseLoading) {
         void loadGuestAlbumsFromFirebase();
     }
-
-    const profile = getStoredAccessProfile();
-    const isGuest = profile && profile.type === "guest" && profile.name;
 
     section.className = "section bg-lavanda recuerdos-center-section";
 
