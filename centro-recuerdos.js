@@ -374,7 +374,18 @@ function buildGuestAlbumFirestoreRecord(album, profile, overrides = {}) {
         coverPhotoId: normalizedAlbum.coverPhotoId || null,
         coverPhotoUrl: normalizedAlbum.coverPhotoUrl || null,
         photoCount: typeof normalizedAlbum.photoCount === "number" ? normalizedAlbum.photoCount : (Array.isArray(normalizedAlbum.photos) ? normalizedAlbum.photos.length : 0),
-        videoCount: typeof normalizedAlbum.videoCount === "number" ? normalizedAlbum.videoCount : (normalizedAlbum.video ? 1 : 0)
+        videoCount: typeof normalizedAlbum.videoCount === "number" ? normalizedAlbum.videoCount : (normalizedAlbum.video ? 1 : 0),
+        video: normalizedAlbum.video ? {
+            id: normalizedAlbum.video.id,
+            kind: "video",
+            name: normalizedAlbum.video.name,
+            src: normalizedAlbum.video.src,
+            createdAt: normalizedAlbum.video.createdAt,
+            fileName: normalizedAlbum.video.fileName,
+            mimeType: normalizedAlbum.video.mimeType,
+            storagePath: normalizedAlbum.video.storagePath,
+            downloadUrl: normalizedAlbum.video.downloadUrl
+        } : null
     };
 }
 
@@ -679,22 +690,14 @@ function clearAccessProfile() {
     officialAlbumState.guestRefreshAttempted = false;
 }
 
+let legacyAlbumsInMemory = [];
+
 function getStoredAlbums() {
-    const storedAlbums = localStorage.getItem(albumStorageKey);
-
-    if (!storedAlbums) {
-        return [];
-    }
-
-    try {
-        return JSON.parse(storedAlbums);
-    } catch (error) {
-        return [];
-    }
+    return legacyAlbumsInMemory || [];
 }
 
 function saveAlbums(albums) {
-    localStorage.setItem(albumStorageKey, JSON.stringify(albums));
+    legacyAlbumsInMemory = albums || [];
 }
 
 function createOfficialAlbumItem(source, origin = "seed") {
@@ -3321,7 +3324,10 @@ const guestCenterState = {
         items: [],
         index: 0,
         title: ""
-    }
+    },
+    albums: [],
+    firebaseLoading: false,
+    firebaseLoaded: false
 };
 
 const adminCenterState = {
@@ -3414,21 +3420,217 @@ function getGuestPaginationWindow(items, page, pageSize) {
 }
 
 function getStoredGuestAlbums() {
-    const rawAlbums = localStorage.getItem(guestAlbumsStorageKey);
-
-    if (!rawAlbums) {
-        return [];
-    }
-
-    try {
-        return JSON.parse(rawAlbums).map((album) => normalizeGuestAlbumRecord(album)).filter(Boolean);
-    } catch (error) {
-        return [];
-    }
+    return guestCenterState.albums || [];
 }
 
 function saveStoredGuestAlbums(albums) {
-    localStorage.setItem(guestAlbumsStorageKey, JSON.stringify(albums.map((album) => normalizeGuestAlbumRecord(album)).filter(Boolean)));
+    guestCenterState.albums = (albums || []).map((album) => normalizeGuestAlbumRecord(album)).filter(Boolean);
+}
+
+async function loadGuestAlbumsFromFirebase(force = false) {
+    if (guestCenterState.firebaseLoading || (guestCenterState.firebaseLoaded && !force)) {
+        return;
+    }
+
+    guestCenterState.firebaseLoading = true;
+
+    const firebaseApi = await getFirebaseGuestAlbumApi();
+
+    if (!firebaseApi) {
+        guestCenterState.firebaseLoading = false;
+        guestCenterState.firebaseLoaded = true;
+        return;
+    }
+
+    try {
+        const albumsCollectionRef = firebaseApi.collection(firebaseApi.firestore, "events", recuerdosEventId, "albums");
+        const albumsSnapshot = await firebaseApi.getDocs(albumsCollectionRef);
+        
+        if (albumsSnapshot.empty) {
+            saveStoredGuestAlbums([]);
+            guestCenterState.firebaseLoaded = true;
+            guestCenterState.firebaseLoading = false;
+            renderAlbumsSection();
+            return;
+        }
+
+        const guestAlbums = albumsSnapshot.docs.map((docSnapshot) => {
+            const albumData = docSnapshot.data();
+            if (albumData.albumType !== "guest") {
+                return null;
+            }
+            const albumId = docSnapshot.id;
+
+            const existingAlbum = guestCenterState.albums.find(a => a.id === albumId);
+            const photos = existingAlbum ? existingAlbum.photos : [];
+
+            return normalizeGuestAlbumRecord({
+                id: albumId,
+                ownerName: albumData.ownerName || "Invitado",
+                ownerType: albumData.ownerType || "guest",
+                ownerUserId: albumData.ownerUserId || null,
+                albumType: "guest",
+                title: albumData.title || albumData.ownerName,
+                createdAt: albumData.createdAt,
+                lastActivityAt: albumData.lastActivityAt,
+                coverPhotoId: albumData.coverPhotoId,
+                coverPhotoUrl: albumData.coverPhotoUrl,
+                photoCount: typeof albumData.photoCount === "number" ? albumData.photoCount : photos.length,
+                photos: photos,
+                video: albumData.video ? normalizeGuestMediaItem(albumData.video, "video") : null,
+                videoCount: typeof albumData.videoCount === "number" ? albumData.videoCount : (albumData.video ? 1 : 0)
+            });
+        }).filter(Boolean);
+
+        saveStoredGuestAlbums(guestAlbums);
+
+        guestCenterState.firebaseLoaded = true;
+        guestCenterState.firebaseLoading = false;
+        renderAlbumsSection();
+    } catch (error) {
+        guestCenterState.firebaseLoading = false;
+        guestCenterState.firebaseLoaded = true;
+        console.error("[Recuerdos] No se pudo cargar los Álbumes de Invitados desde Firebase.", error);
+        showToast("No se pudieron cargar los álbumes compartidos de Firebase. Se muestran los recuerdos en memoria.", "error");
+    }
+}
+
+async function loadGuestAlbumPhotosIfNeeded(albumId) {
+    const album = guestCenterState.albums.find(a => a.id === albumId);
+    if (!album) {
+        return;
+    }
+
+    if ((album.photos && album.photos.length > 0) || !album.photoCount) {
+        return;
+    }
+
+    const firebaseApi = await getFirebaseGuestAlbumApi();
+    if (!firebaseApi) {
+        return;
+    }
+
+    try {
+        const paths = getGuestAlbumFirestorePath(albumId);
+        const photosCollectionRef = firebaseApi.collection(firebaseApi.firestore, ...paths.photosCollectionPath);
+        const photosSnapshot = await firebaseApi.getDocs(photosCollectionRef);
+        
+        const photos = photosSnapshot.docs.map((photoDoc) => {
+            const photoData = photoDoc.data();
+            return normalizeGuestMediaItem({
+                ...photoData,
+                id: photoDoc.id,
+                src: photoData.downloadUrl || photoData.src || ""
+            }, "photo");
+        }).filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        album.photos = photos;
+        album.photoCount = photos.length;
+    } catch (error) {
+        console.error(`[Recuerdos] No se pudieron cargar las fotos del álbum ${albumId} desde Firebase.`, error);
+    }
+}
+
+async function persistGuestVideoUpload(videoItem, file) {
+    const firebaseApi = await getFirebaseGuestAlbumApi();
+    const profile = getStoredAccessProfile();
+    const album = getOrCreateCurrentGuestAlbum();
+
+    if (!firebaseApi || !profile || !album) {
+        showToast("No se pudo guardar el video en Firebase. El video sigue visible en este dispositivo.", "error");
+        return;
+    }
+
+    const paths = getGuestAlbumFirestorePath(album.id);
+    const albumRef = firebaseApi.doc(firebaseApi.firestore, ...paths.albumDocPath);
+
+    setGuestUploadProgress({
+        active: true,
+        completed: 0,
+        total: 1,
+        label: "Subiendo video",
+        fileName: file.name
+    });
+    renderAlbumsSection();
+
+    try {
+        const storagePath = `events/${recuerdosEventId}/albums/${album.id}/video/${videoItem.id}-${file.name}`;
+        const storageRef = firebaseApi.ref(firebaseApi.storage, storagePath);
+        const uploadTask = firebaseApi.uploadBytesResumable(storageRef, file, {
+            contentType: file.type
+        });
+
+        const uploadSnapshot = await new Promise((resolve, reject) => {
+            uploadTask.on(
+                "state_changed",
+                (snapshot) => {
+                    const totalBytes = snapshot.totalBytes || file.size || 1;
+                    const fileProgress = totalBytes > 0 ? snapshot.bytesTransferred / totalBytes : 0;
+                    setGuestUploadProgress({
+                        completed: fileProgress,
+                        total: 1,
+                        fileName: file.name
+                    });
+                    renderAlbumsSection();
+                },
+                (error) => reject(error),
+                () => resolve(uploadTask.snapshot)
+            );
+        });
+
+        const downloadUrl = await firebaseApi.getDownloadURL(uploadSnapshot.ref);
+
+        if (!album.video || album.video.id !== videoItem.id) {
+            await firebaseApi.deleteObject(storageRef);
+            return;
+        }
+
+        album.video.src = downloadUrl;
+        album.video.downloadUrl = downloadUrl;
+        album.video.storagePath = storagePath;
+        album.videoCount = 1;
+
+        const storedAlbums = getStoredGuestAlbums();
+        const nextAlbums = storedAlbums.map((entry) => entry.id === album.id ? album : entry);
+        saveStoredGuestAlbums(nextAlbums);
+
+        await firebaseApi.setDoc(albumRef, buildGuestAlbumFirestoreRecord(album, profile), { merge: true });
+
+        showToast("Video guardado en Firebase.", "success");
+    } catch (error) {
+        console.error("[Recuerdos] No se pudo guardar el video en Firebase.", error);
+        showToast("No se pudo subir el video a Firebase. El video sigue visible en este dispositivo.", "error");
+    } finally {
+        resetGuestUploadProgress();
+        renderAlbumsSection();
+    }
+}
+
+async function deleteGuestVideoRemote(targetVideo, album, profile) {
+    const firebaseApi = await getFirebaseGuestAlbumApi();
+
+    if (!firebaseApi) {
+        showToast("No se pudo sincronizar la eliminación con Firebase. El cambio quedó en este dispositivo.", "error");
+        return;
+    }
+
+    const paths = getGuestAlbumFirestorePath(album.id);
+    const albumRef = firebaseApi.doc(firebaseApi.firestore, ...paths.albumDocPath);
+
+    try {
+        if (targetVideo.storagePath) {
+            await firebaseApi.deleteObject(firebaseApi.ref(firebaseApi.storage, targetVideo.storagePath));
+        }
+
+        const storedAlbums = getStoredGuestAlbums();
+        const nextAlbums = storedAlbums.map((item) => item.id === album.id ? album : item);
+        saveStoredGuestAlbums(nextAlbums);
+
+        await firebaseApi.setDoc(albumRef, buildGuestAlbumFirestoreRecord(album, profile), { merge: true });
+    } catch (error) {
+        console.error("[Recuerdos] No se pudo eliminar el video de Mi Álbum en Firebase.", error);
+        showToast("No se pudo sincronizar la eliminación con Firebase. El video se mantiene visible en este dispositivo.", "error");
+    }
 }
 
 function getCurrentGuestAlbum(profile = getStoredAccessProfile()) {
@@ -3859,8 +4061,10 @@ function removeGuestMedia(mediaId) {
     renderAlbumsSection();
 }
 
-function openGuestMediaFromAlbum(albumId, startIndex = 0) {
+async function openGuestMediaFromAlbum(albumId, startIndex = 0) {
     const profile = getStoredAccessProfile();
+    await loadGuestAlbumPhotosIfNeeded(albumId);
+
     const album = albumId === (profile && profile.albumId)
         ? getOrCreateCurrentGuestAlbum()
         : [...getGuestPublicAlbums(profile), getOrCreateCurrentGuestAlbum()].find((item) => item && item.id === albumId);
@@ -3873,10 +4077,14 @@ function openGuestMediaFromAlbum(albumId, startIndex = 0) {
     openGuestViewer(items, startIndex, album.ownerName);
 }
 
-function openGuestPresentation() {
+async function openGuestPresentation() {
     const profile = getStoredAccessProfile();
     const currentAlbum = getOrCreateCurrentGuestAlbum();
     const catalog = [currentAlbum, ...getGuestPublicAlbums(profile)].filter(Boolean);
+
+    const promises = catalog.map((album) => loadGuestAlbumPhotosIfNeeded(album.id));
+    await Promise.all(promises);
+
     const items = catalog.flatMap((album) => getGuestAlbumMediaItems(album));
 
     if (!items.length) {
@@ -5186,6 +5394,8 @@ function addGuestVideo(file) {
     saveStoredGuestAlbums(nextAlbums);
     renderAlbumsSection();
     showToast("Tu video quedó agregado al álbum.", "success");
+
+    void persistGuestVideoUpload(album.video, file);
 }
 
 async function deleteGuestPhotoRemote(targetPhoto, album, profile) {
@@ -5224,6 +5434,7 @@ function removeGuestMedia(mediaId) {
       const album = getOrCreateCurrentGuestAlbum();
       const profile = getStoredAccessProfile();
       let targetPhoto = null;
+      let targetVideo = null;
 
     if (!album || !mediaId) {
         return;
@@ -5244,8 +5455,11 @@ function removeGuestMedia(mediaId) {
         album.photos = album.photos.filter((photo) => photo.id !== mediaId);
     }
 
-    if (isVideo && album.video && album.video.objectUrl) {
-        window.URL.revokeObjectURL(album.video.objectUrl);
+    if (isVideo && album.video) {
+        targetVideo = album.video;
+        if (targetVideo.objectUrl || targetVideo.src) {
+            window.URL.revokeObjectURL(targetVideo.objectUrl || targetVideo.src);
+        }
         album.video = null;
     }
 
@@ -5261,6 +5475,10 @@ function removeGuestMedia(mediaId) {
 
       if (isPhoto && targetPhoto) {
           void deleteGuestPhotoRemote(targetPhoto, album, profile);
+      }
+
+      if (isVideo && targetVideo) {
+          void deleteGuestVideoRemote(targetVideo, album, profile);
       }
   }
 
@@ -5641,6 +5859,10 @@ function renderAlbumsSection() {
 
     if (!section) {
         return;
+    }
+
+    if (!guestCenterState.firebaseLoaded && !guestCenterState.firebaseLoading) {
+        void loadGuestAlbumsFromFirebase();
     }
 
     const profile = getStoredAccessProfile();
