@@ -79,10 +79,13 @@ function normalizeAccessProfile(profile) {
         ? (profile.displayName || profile.name || "")
         : (profile.displayName || profile.name || "Administrador");
     const deviceId = profile.deviceId || getOrCreateDeviceId();
-    const fallbackUserId = role === "guest" ? `guest-${deviceId}` : deviceId;
-    const userId = role === "guest" && profile.userId === deviceId
+    const normalizedName = normalizeDisplayName(displayName);
+    const fallbackUserId = role === "guest" ? `guest-${deviceId}-${normalizedName}` : deviceId;
+    const currentUserId = profile.userId;
+    const isLegacyUserId = currentUserId === deviceId || currentUserId === `guest-${deviceId}`;
+    const userId = (role === "guest" && (isLegacyUserId || !currentUserId))
         ? fallbackUserId
-        : (profile.userId || fallbackUserId);
+        : (currentUserId || fallbackUserId);
 
     return {
         ...profile,
