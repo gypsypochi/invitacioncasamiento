@@ -19,100 +19,6 @@ const recuerdosDemoData = {
             label: "Centro de Recuerdos"
         }
     ],
-    messageBoardSeed: [
-        {
-            initials: "MC",
-            author: "Mica",
-            message: "Gracias por acompañarnos en este momento tan especial.",
-            meta: "Hace unos minutos"
-        },
-        {
-            initials: "JR",
-            author: "Juli",
-            message: "Les deseo una vida llena de amor y momentos inolvidables.",
-            meta: "Hace 1 hora"
-        },
-        {
-            initials: "FA",
-            author: "Familia",
-            message: "Qué lindo poder dejar saludos en un espacio tan cuidado.",
-            meta: "Hoy"
-        },
-        {
-            initials: "AM",
-            author: "Amigos",
-            message: "Cada mensaje suma un recuerdo más a esta historia compartida.",
-            meta: "Hoy"
-        }
-    ],
-    albumDirectory: [
-        {
-            initials: "FC",
-            ownerName: "Cami",
-            title: "Familia",
-            photoCount: 14,
-            note: "Álbum compartido con recuerdos familiares.",
-            accent: "accent-rose"
-        },
-        {
-            initials: "AS",
-            ownerName: "Sofi",
-            title: "Amigos",
-            photoCount: 9,
-            note: "Momentos de pista y mesa.",
-            accent: "accent-lavender"
-        },
-        {
-            initials: "MN",
-            ownerName: "Nico",
-            title: "Mesa de fotos",
-            photoCount: 11,
-            note: "Recuerdos de la celebración.",
-            accent: "accent-sand"
-        },
-        {
-            initials: "LF",
-            ownerName: "Lau",
-            title: "Fiesta",
-            photoCount: 7,
-            note: "Fotos espontáneas para volver a mirar.",
-            accent: "accent-plum"
-        }
-    ],
-    guestAlbumPreviewSeed: [
-        {
-            id: "demo-1",
-            title: "Familia",
-            ownerName: "Cami",
-            photoCount: 14,
-            accentClass: "accent-rose",
-            initials: "FC"
-        },
-        {
-            id: "demo-2",
-            title: "Amigos",
-            ownerName: "Sofi",
-            photoCount: 9,
-            accentClass: "accent-lavender",
-            initials: "AS"
-        },
-        {
-            id: "demo-3",
-            title: "Mesa de fotos",
-            ownerName: "Nico",
-            photoCount: 11,
-            accentClass: "accent-sand",
-            initials: "MN"
-        },
-        {
-            id: "demo-4",
-            title: "Fiesta",
-            ownerName: "Lau",
-            photoCount: 7,
-            accentClass: "accent-plum",
-            initials: "LF"
-        }
-    ]
 };
 
 const accessStorageKey = "centroRecuerdosAccess";
@@ -624,37 +530,6 @@ function createGuestAlbumUploadItem(file, index) {
     }, "photo");
 }
 
-const officialAlbumSeed = [
-    {
-        id: "official-seed-1",
-        title: "Ceremonia",
-        alt: "Marcela y Jorge durante la ceremonia",
-        src: "assets/album-oficial/official-1.jpg",
-        fallbackSrc: "assets/img-1.png"
-    },
-    {
-        id: "official-seed-2",
-        title: "Miradas",
-        alt: "Un momento emotivo compartido por los novios",
-        src: "assets/album-oficial/official-2.jpg",
-        fallbackSrc: "assets/img-2.png"
-    },
-    {
-        id: "official-seed-3",
-        title: "Celebración",
-        alt: "La celebración del casamiento",
-        src: "assets/album-oficial/official-3.jpg",
-        fallbackSrc: "assets/img-3.png"
-    },
-    {
-        id: "official-seed-4",
-        title: "Fiesta",
-        alt: "Una imagen de la fiesta y el baile",
-        src: "assets/album-oficial/official-4.jpg",
-        fallbackSrc: "assets/img-4.png"
-    }
-];
-
 const recuerdosAppState = {
     messageColor: "rose",
     officialAlbum: {
@@ -1026,61 +901,6 @@ async function loadOfficialAlbumFromFirebase(force = false) {
     }
 }
 
-async function bootstrapOfficialAlbumSeedData(firebaseApi, albumRef, photosCollectionRef) {
-    const seedItems = officialAlbumSeed.map((item) => createOfficialAlbumItem(item, "seed"));
-    const bootstrappedItems = [];
-
-    for (let index = 0; index < seedItems.length; index += 1) {
-        const seedItem = seedItems[index];
-
-        try {
-            const response = await fetch(seedItem.src);
-            if (!response.ok) {
-                continue;
-            }
-
-            const blob = await response.blob();
-            const storagePath = `events/${recuerdosEventId}/albums/official/photos/${seedItem.id}`;
-            const storageRef = firebaseApi.ref(firebaseApi.storage, storagePath);
-            const uploadResult = await firebaseApi.uploadBytes(storageRef, blob, {
-                contentType: blob.type || "image/jpeg"
-            });
-            const downloadUrl = await firebaseApi.getDownloadURL(uploadResult.ref);
-            const record = buildOfficialAlbumFirestoreRecord({
-                ...seedItem,
-                storagePath,
-                downloadUrl,
-                published: true,
-                order: index,
-                createdBy: "seed"
-            }, {
-                createdBy: "seed",
-                order: index
-            });
-
-            await firebaseApi.setDoc(firebaseApi.doc(firebaseApi.firestore, ...pathsForPhotoDoc(seedItem.id)), record, { merge: true });
-            bootstrappedItems.push(normalizeOfficialAlbumFromRecord(record, seedItem.id, index));
-        } catch (error) {
-            console.error("[Recuerdos] No se pudo inicializar una fotografía oficial de prueba.", error);
-        }
-    }
-
-    if (!bootstrappedItems.length) {
-        return seedItems;
-    }
-
-    await firebaseApi.setDoc(albumRef, {
-        albumId: "official",
-        albumType: "official",
-        title: "Álbum Oficial",
-        coverPhotoId: bootstrappedItems[0].id,
-        coverPhotoUrl: bootstrappedItems[0].downloadUrl || bootstrappedItems[0].src,
-        lastActivityAt: new Date().toISOString(),
-        photoCount: bootstrappedItems.length
-    }, { merge: true });
-
-    return bootstrappedItems;
-}
 
 function pathsForPhotoDoc(photoId) {
     const paths = getOfficialAlbumFirestorePath();
@@ -1801,25 +1621,35 @@ function normalizeWallMessage(message, index = 0) {
     };
 }
 
+function isDemoWallMessage(message) {
+    const author = normalizeDisplayName(message && message.author);
+    const ownerKey = String(message && message.ownerKey || "");
+    const messageId = String(message && message.id || "");
+
+    return ownerKey.startsWith("seed-")
+        || messageId.startsWith("seed-")
+        || ["mica", "juli", "familia", "amigos"].includes(author);
+}
+
 function getStoredWallMessages() {
     const storedMessages = localStorage.getItem(wallStorageKey);
 
     if (storedMessages) {
         try {
-            return JSON.parse(storedMessages).map((message, index) => normalizeWallMessage(message, index));
+            const normalizedMessages = JSON.parse(storedMessages).map((message, index) => normalizeWallMessage(message, index));
+            const cleanedMessages = normalizedMessages.filter((message) => !isDemoWallMessage(message));
+
+            if (cleanedMessages.length !== normalizedMessages.length) {
+                saveWallMessages(cleanedMessages);
+            }
+
+            return cleanedMessages;
         } catch (error) {
             return [];
         }
     }
 
-    return recuerdosDemoData.messageBoardSeed.map((message, index) => normalizeWallMessage({
-        id: "seed-" + index,
-        author: message.author,
-        ownerKey: "seed-" + index,
-        createdAt: new Date(Date.now() - ((index + 1) * 3600 * 1000)).toISOString(),
-        text: message.message,
-        color: getWallColorPalette()[index % getWallColorPalette().length].key
-    }, index));
+    return [];
 }
 
 function saveWallMessages(messages) {
@@ -2233,15 +2063,31 @@ function renderMessageBoardCards() {
         return;
     }
 
-    boardElement.innerHTML = recuerdosDemoData.messageBoardSeed.map((message) => `
+    const messages = getStoredWallMessages();
+
+    if (!messages.length) {
+        boardElement.innerHTML = `
+            <article class="message-card">
+                <div class="message-body">
+                    <div class="message-body-head">
+                        <strong class="message-author">TodavÃ­a no hay mensajes</strong>
+                    </div>
+                    <p class="message-text">Cuando lleguen saludos reales desde Firebase, van a aparecer acÃ¡.</p>
+                </div>
+            </article>
+        `;
+        return;
+    }
+
+    boardElement.innerHTML = messages.map((message) => `
         <article class="message-card">
-            <span class="message-avatar">${escapeHTML(message.initials)}</span>
+            <span class="message-avatar">${escapeHTML(initialsFromName(message.author))}</span>
             <div class="message-body">
                 <div class="message-body-head">
                     <strong class="message-author">${escapeHTML(message.author)}</strong>
-                    <span class="message-meta">${escapeHTML(message.meta)}</span>
+                    <span class="message-meta">${escapeHTML(formatWallTimestamp(message.createdAt))}</span>
                 </div>
-                <p class="message-text">${escapeHTML(message.message)}</p>
+                <p class="message-text">${escapeHTML(message.text)}</p>
             </div>
         </article>
     `).join("");
@@ -2262,7 +2108,7 @@ function getVisibleGuestAlbums() {
         }));
     }
 
-    return recuerdosDemoData.guestAlbumPreviewSeed;
+    return [];
 }
 
 function getActiveGuestAlbum() {
@@ -2752,10 +2598,24 @@ function renderMessageBoardCards() {
 
     const profile = getStoredAccessProfile();
     const currentOwnerKey = getWallSessionKey(profile);
+    const isAdmin = profile && profile.type === "admin";
     const messages = getStoredWallMessages();
 
+    if (!messages.length) {
+        boardElement.innerHTML = `
+            <article class="message-note accent-sand">
+                <div class="message-note-head">
+                    <strong class="message-note-author">Todavía no hay comentarios</strong>
+                </div>
+                <p class="message-note-text">Cuando existan mensajes reales, van a aparecer aquí.</p>
+            </article>
+        `;
+        return;
+    }
+
     boardElement.innerHTML = messages.map((message) => {
-        const canManageMessage = message.ownerKey === currentOwnerKey && currentOwnerKey !== "visitor";
+        const canEditMessage = message.ownerKey === currentOwnerKey && currentOwnerKey !== "visitor";
+        const canDeleteMessage = canEditMessage || isAdmin;
 
         return `
             <article class="message-note accent-${escapeHTML(message.color)}">
@@ -2764,10 +2624,10 @@ function renderMessageBoardCards() {
                     <span class="message-note-meta">${escapeHTML(formatWallTimestamp(message.createdAt))}</span>
                 </div>
                 <p class="message-note-text">${escapeHTML(message.text)}</p>
-                ${canManageMessage ? `
+                ${canEditMessage || canDeleteMessage ? `
                     <div class="message-note-actions">
-                        <button type="button" class="message-note-action" data-action="edit" data-message-id="${escapeHTML(message.id)}">Editar</button>
-                        <button type="button" class="message-note-action" data-action="delete" data-message-id="${escapeHTML(message.id)}">Eliminar</button>
+                        ${canEditMessage ? `<button type="button" class="message-note-action" data-action="edit" data-message-id="${escapeHTML(message.id)}">Editar</button>` : ""}
+                        ${canDeleteMessage ? `<button type="button" class="message-note-action" data-action="delete" data-message-id="${escapeHTML(message.id)}">Eliminar</button>` : ""}
                     </div>
                 ` : ""}
             </article>
@@ -2791,6 +2651,7 @@ function renderMessageBoardCards() {
 function handleWallAction(action, messageId) {
     const profile = getStoredAccessProfile();
     const currentOwnerKey = getWallSessionKey(profile);
+    const isAdmin = profile && profile.type === "admin";
     const messages = getStoredWallMessages();
     const messageIndex = messages.findIndex((message) => message.id === messageId);
 
@@ -2799,12 +2660,14 @@ function handleWallAction(action, messageId) {
     }
 
     const message = messages[messageIndex];
-
-    if (message.ownerKey !== currentOwnerKey || currentOwnerKey === "visitor") {
-        return;
-    }
+    const canEditMessage = message.ownerKey === currentOwnerKey && currentOwnerKey !== "visitor";
+    const canDeleteMessage = canEditMessage || isAdmin;
 
     if (action === "delete") {
+        if (!canDeleteMessage) {
+            return;
+        }
+
         if (!window.confirm("¿Querés eliminar este mensaje?")) {
             return;
         }
@@ -2816,6 +2679,10 @@ function handleWallAction(action, messageId) {
     }
 
     if (action === "edit") {
+        if (!canEditMessage) {
+            return;
+        }
+
         const nextText = window.prompt("Editá tu mensaje", message.text);
 
         if (nextText === null) {
@@ -2951,10 +2818,24 @@ function renderMessageBoardCards() {
 
     const profile = getStoredAccessProfile();
     const currentOwnerKey = getWallSessionKey(profile);
+    const isAdmin = profile && profile.type === "admin";
     const messages = getStoredWallMessages();
 
+    if (!messages.length) {
+        boardElement.innerHTML = `
+            <article class="message-note accent-sand">
+                <div class="message-note-head">
+                    <strong class="message-note-author">Todavía no hay comentarios</strong>
+                </div>
+                <p class="message-note-text">Cuando existan mensajes reales, van a aparecer aquí.</p>
+            </article>
+        `;
+        return;
+    }
+
     boardElement.innerHTML = messages.map((message) => {
-        const canManageMessage = message.ownerKey === currentOwnerKey && currentOwnerKey !== "visitor";
+        const canEditMessage = message.ownerKey === currentOwnerKey && currentOwnerKey !== "visitor";
+        const canDeleteMessage = canEditMessage || isAdmin;
 
         return `
             <article class="message-note accent-${escapeHTML(message.color)}">
@@ -2963,10 +2844,10 @@ function renderMessageBoardCards() {
                     <span class="message-note-meta">${escapeHTML(formatWallTimestamp(message.createdAt))}</span>
                 </div>
                 <p class="message-note-text">${escapeHTML(message.text)}</p>
-                ${canManageMessage ? `
+                ${canEditMessage || canDeleteMessage ? `
                     <div class="message-note-actions">
-                        <button type="button" class="message-note-action" data-action="edit" data-message-id="${escapeHTML(message.id)}">Editar</button>
-                        <button type="button" class="message-note-action" data-action="delete" data-message-id="${escapeHTML(message.id)}">Eliminar</button>
+                        ${canEditMessage ? `<button type="button" class="message-note-action" data-action="edit" data-message-id="${escapeHTML(message.id)}">Editar</button>` : ""}
+                        ${canDeleteMessage ? `<button type="button" class="message-note-action" data-action="delete" data-message-id="${escapeHTML(message.id)}">Eliminar</button>` : ""}
                     </div>
                 ` : ""}
             </article>
@@ -2990,6 +2871,7 @@ function renderMessageBoardCards() {
 function handleWallAction(action, messageId) {
     const profile = getStoredAccessProfile();
     const currentOwnerKey = getWallSessionKey(profile);
+    const isAdmin = profile && profile.type === "admin";
     const messages = getStoredWallMessages();
     const messageIndex = messages.findIndex((message) => message.id === messageId);
 
@@ -2998,12 +2880,14 @@ function handleWallAction(action, messageId) {
     }
 
     const message = messages[messageIndex];
-
-    if (message.ownerKey !== currentOwnerKey || currentOwnerKey === "visitor") {
-        return;
-    }
+    const canEditMessage = message.ownerKey === currentOwnerKey && currentOwnerKey !== "visitor";
+    const canDeleteMessage = canEditMessage || isAdmin;
 
     if (action === "delete") {
+        if (!canDeleteMessage) {
+            return;
+        }
+
         if (!window.confirm("¿Querés eliminar este mensaje?")) {
             return;
         }
@@ -3015,6 +2899,10 @@ function handleWallAction(action, messageId) {
     }
 
     if (action === "edit") {
+        if (!canEditMessage) {
+            return;
+        }
+
         const nextText = window.prompt("Editá tu mensaje", message.text);
 
         if (nextText === null) {
@@ -3076,14 +2964,7 @@ function renderAlbumsSection() {
     const profile = getStoredAccessProfile();
     const isGuest = profile && profile.type === "guest" && profile.name;
     const guestName = isGuest ? profile.name : "";
-    const demoAlbums = [
-        { ownerName: "Julieta" },
-        { ownerName: "Sofía" },
-        { ownerName: "Nicolás" },
-        { ownerName: "Camila" },
-        { ownerName: "Laura" }
-    ];
-
+    
     section.className = "section bg-lavanda recuerdos-center-section";
     section.innerHTML = `
         <i class="fa-solid fa-folder-open icon-evento" aria-hidden="true"></i>
@@ -3130,7 +3011,7 @@ function renderAlbumsSection() {
         }
 
         const normalizedQuery = query.trim().toLowerCase();
-        const filteredAlbums = demoAlbums.filter((album) => album.ownerName.toLowerCase().includes(normalizedQuery));
+        const filteredAlbums = getGuestFilteredAlbums(normalizedQuery, profile);
 
         gridElement.innerHTML = filteredAlbums.map((album) => `
             <article class="center-album-item">
@@ -3167,8 +3048,7 @@ function renderAlbumsSection() {
     const profile = getStoredAccessProfile();
     const isGuest = profile && profile.type === "guest" && profile.name;
     const guestName = isGuest ? profile.name : "";
-    const demoAlbums = ["Julieta", "Sofía", "Nicolás", "Camila", "Laura"];
-
+    
     section.className = "section bg-lavanda recuerdos-center-section";
     section.innerHTML = `
         <i class="fa-solid fa-folder-open icon-evento" aria-hidden="true"></i>
@@ -3215,7 +3095,7 @@ function renderAlbumsSection() {
         }
 
         const normalizedQuery = query.trim().toLowerCase();
-        const filteredAlbums = demoAlbums.filter((ownerName) => ownerName.toLowerCase().includes(normalizedQuery));
+        const filteredAlbums = getGuestFilteredAlbums(normalizedQuery, profile);
 
         gridElement.innerHTML = filteredAlbums.map((ownerName) => `
             <article class="center-album-item">
@@ -3232,114 +3112,6 @@ function renderAlbumsSection() {
 }
 
 const guestAlbumsStorageKey = "centroRecuerdosGuestAlbumsV1";
-
-const guestAlbumSeedCatalog = [
-    {
-        id: "seed-familia",
-        ownerName: "Familia",
-        ownerType: "guest",
-        createdAt: "2026-07-16T00:00:00.000Z",
-        photos: [
-            { id: "seed-familia-1", name: "Familia 1", src: "assets/img-1.png", createdAt: "2026-07-16T00:00:00.000Z" },
-            { id: "seed-familia-2", name: "Familia 2", src: "assets/img-2.png", createdAt: "2026-07-16T00:01:00.000Z" }
-        ],
-        video: null
-    },
-    {
-        id: "seed-amigos",
-        ownerName: "Amigos",
-        ownerType: "guest",
-        createdAt: "2026-07-16T00:02:00.000Z",
-        photos: [
-            { id: "seed-amigos-1", name: "Amigos 1", src: "assets/img-3.png", createdAt: "2026-07-16T00:02:00.000Z" },
-            { id: "seed-amigos-2", name: "Amigos 2", src: "assets/img-4.png", createdAt: "2026-07-16T00:03:00.000Z" }
-        ],
-        video: null
-    },
-    {
-        id: "seed-bailando",
-        ownerName: "Bailando",
-        ownerType: "guest",
-        createdAt: "2026-07-16T00:04:00.000Z",
-        photos: [
-            { id: "seed-bailando-1", name: "Baile 1", src: "assets/img-4.png", createdAt: "2026-07-16T00:04:00.000Z" }
-        ],
-        video: null
-    },
-    {
-        id: "seed-mesa",
-        ownerName: "Mesa",
-        ownerType: "guest",
-        createdAt: "2026-07-16T00:05:00.000Z",
-        photos: [
-            { id: "seed-mesa-1", name: "Mesa 1", src: "assets/img-2.png", createdAt: "2026-07-16T00:05:00.000Z" },
-            { id: "seed-mesa-2", name: "Mesa 2", src: "assets/img-1.png", createdAt: "2026-07-16T00:06:00.000Z" }
-        ],
-        video: null
-    },
-    {
-        id: "seed-celebracion",
-        ownerName: "Celebración",
-        ownerType: "guest",
-        createdAt: "2026-07-16T00:07:00.000Z",
-        photos: [
-            { id: "seed-celebracion-1", name: "Celebración 1", src: "assets/img-3.png", createdAt: "2026-07-16T00:07:00.000Z" }
-        ],
-        video: null
-    },
-    {
-        id: "seed-brindis",
-        ownerName: "Brindis",
-        ownerType: "guest",
-        createdAt: "2026-07-16T00:08:00.000Z",
-        photos: [
-            { id: "seed-brindis-1", name: "Brindis 1", src: "assets/img-1.png", createdAt: "2026-07-16T00:08:00.000Z" }
-        ],
-        video: null
-    },
-    {
-        id: "seed-detalles",
-        ownerName: "Detalles",
-        ownerType: "guest",
-        createdAt: "2026-07-16T00:09:00.000Z",
-        photos: [
-            { id: "seed-detalles-1", name: "Detalles 1", src: "assets/img-2.png", createdAt: "2026-07-16T00:09:00.000Z" }
-        ],
-        video: null
-    },
-    {
-        id: "seed-entradas",
-        ownerName: "Entradas",
-        ownerType: "guest",
-        createdAt: "2026-07-16T00:10:00.000Z",
-        photos: [
-            { id: "seed-entradas-1", name: "Entrada 1", src: "assets/img-3.png", createdAt: "2026-07-16T00:10:00.000Z" },
-            { id: "seed-entradas-2", name: "Entrada 2", src: "assets/img-4.png", createdAt: "2026-07-16T00:11:00.000Z" }
-        ],
-        video: null
-    },
-    {
-        id: "seed-sonrisas",
-        ownerName: "Sonrisas",
-        ownerType: "guest",
-        createdAt: "2026-07-16T00:12:00.000Z",
-        photos: [
-            { id: "seed-sonrisas-1", name: "Sonrisa 1", src: "assets/img-4.png", createdAt: "2026-07-16T00:12:00.000Z" }
-        ],
-        video: null
-    },
-    {
-        id: "seed-recuerdos",
-        ownerName: "Recuerdos",
-        ownerType: "guest",
-        createdAt: "2026-07-16T00:13:00.000Z",
-        photos: [
-            { id: "seed-recuerdos-1", name: "Recuerdo 1", src: "assets/img-1.png", createdAt: "2026-07-16T00:13:00.000Z" },
-            { id: "seed-recuerdos-2", name: "Recuerdo 2", src: "assets/img-2.png", createdAt: "2026-07-16T00:14:00.000Z" }
-        ],
-        video: null
-    }
-];
 
 const guestCenterState = {
     visibleCount: 5,
@@ -3469,10 +3241,6 @@ function saveStoredGuestAlbums(albums) {
     localStorage.setItem(guestAlbumsStorageKey, JSON.stringify(albums.map((album) => normalizeGuestAlbumRecord(album)).filter(Boolean)));
 }
 
-function getGuestSeedAlbums() {
-    return guestAlbumSeedCatalog.map((album) => normalizeGuestAlbumRecord(album)).filter(Boolean);
-}
-
 function getCurrentGuestAlbum(profile = getStoredAccessProfile()) {
     if (!profile || profile.type !== "guest" || !profile.name) {
         return null;
@@ -3519,7 +3287,6 @@ function getGuestPublicAlbums(profile = getStoredAccessProfile()) {
     return [
         ...(hasCurrentContent ? [currentAlbum] : []),
         ...storedPublicAlbums,
-        ...getGuestSeedAlbums()
     ];
 }
 
@@ -4182,6 +3949,26 @@ function renderGuestCenterSection(profile) {
     guestCenterState.albumsPage = albumsPagination.currentPage;
     const albumSummary = catalog.length ? `${albumsPagination.currentPage} de ${albumsPagination.totalPages}` : "0 de 0";
     const albumAccentClasses = ["accent-rose", "accent-lavender", "accent-sand", "accent-plum"];
+    const hasGuestAlbums = catalog.length > 0;
+    const guestAlbumsGridContent = hasGuestAlbums
+        ? albumsPagination.items.map((album, index) => {
+            const accentClass = album.accentClass || albumAccentClasses[index % albumAccentClasses.length];
+            return `
+                            <button class="guest-album-item ${escapeHTML(accentClass)}" type="button" data-guest-album-id="${escapeHTML(album.id)}">
+                                <span class="guest-album-initials" aria-hidden="true">
+                                    <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+                                </span>
+                                <span class="guest-album-name">${escapeHTML(album.ownerName)}</span>
+                            </button>
+                        `;
+        }).join("")
+        : `
+            <div class="album-empty-state guest-empty-album-card">
+                <i class="fa-solid fa-folder-open guest-empty-album-icon" aria-hidden="true"></i>
+                <h3>No hay álbumes de invitados todavía</h3>
+                <p>Cuando existan álbumes reales en Firebase, aparecerán aquí.</p>
+            </div>
+        `;
 
     return `
         <div class="recuerdos-section-copy">
@@ -4264,17 +4051,7 @@ function renderGuestCenterSection(profile) {
                 </div>
 
                 <div id="guest-albums-grid" class="guest-albums-grid" aria-live="polite">
-                    ${albumsPagination.items.map((album, index) => {
-                        const accentClass = album.accentClass || albumAccentClasses[index % albumAccentClasses.length];
-                        return `
-                            <button class="guest-album-item ${escapeHTML(accentClass)}" type="button" data-guest-album-id="${escapeHTML(album.id)}">
-                                <span class="guest-album-initials" aria-hidden="true">
-                                    <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
-                                </span>
-                                <span class="guest-album-name">${escapeHTML(album.ownerName)}</span>
-                            </button>
-                        `;
-                    }).join("")}
+                    ${guestAlbumsGridContent}
                 </div>
 
                 <div id="guest-albums-pagination" class="guest-pagination" ${albumsPagination.totalPages > 1 ? "" : "hidden"}>
@@ -5574,8 +5351,7 @@ function renderAlbumsSection() {
     section.innerHTML = renderAdminCenterSection();
     bindAdminAlbumInteractions();
     return;
-    const demoAlbums = ["Julieta", "Sofía", "Nicolás", "Camila", "Laura"];
-
+    
     section.innerHTML = `
         <i class="fa-solid fa-folder-open icon-evento" aria-hidden="true"></i>
         <h2>Centro de Recuerdos</h2>
@@ -5617,7 +5393,7 @@ function renderAlbumsSection() {
         }
 
         const normalizedQuery = query.trim().toLowerCase();
-        const filteredAlbums = demoAlbums.filter((ownerName) => ownerName.toLowerCase().includes(normalizedQuery));
+        const filteredAlbums = getGuestFilteredAlbums(normalizedQuery, profile);
 
         gridElement.innerHTML = filteredAlbums.map((ownerName) => `
             <article class="center-album-item">
