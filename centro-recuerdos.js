@@ -3700,7 +3700,7 @@ function getGuestPublicAlbums(profile = getStoredAccessProfile()) {
     const currentAlbum = getCurrentGuestAlbum(profile);
     const hasCurrentContent = Boolean(currentAlbum && ((currentAlbum.photos || []).length > 0 || currentAlbum.video));
     const storedPublicAlbums = getStoredGuestAlbums()
-        .filter((album) => album.photos.length > 0 || album.video)
+        .filter((album) => (album.photos && album.photos.length > 0) || (album.photoCount && album.photoCount > 0) || album.video)
         .filter((album) => !currentAlbum || album.id !== currentAlbum.id);
 
     return [
