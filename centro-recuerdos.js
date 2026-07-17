@@ -15,6 +15,10 @@ const recuerdosDemoData = {
             label: "Fotos Profesionales"
         },
         {
+            target: "messages-section",
+            label: "Muro de Mensajes"
+        },
+        {
             target: "albums-section",
             label: "Centro de Recuerdos"
         }
@@ -5031,9 +5035,9 @@ async function deleteGuestPhotoRemote(targetPhoto, album, profile) {
 }
 
 function removeGuestMedia(mediaId) {
-    const album = getOrCreateCurrentGuestAlbum();
-    const profile = getStoredAccessProfile();
-    let targetPhoto = null;
+      const album = getOrCreateCurrentGuestAlbum();
+      const profile = getStoredAccessProfile();
+      let targetPhoto = null;
 
     if (!album || !mediaId) {
         return;
@@ -5069,15 +5073,117 @@ function removeGuestMedia(mediaId) {
     saveStoredGuestAlbums(nextAlbums);
     renderAlbumsSection();
 
-    if (isPhoto && targetPhoto) {
-        void deleteGuestPhotoRemote(targetPhoto, album, profile);
-    }
+      if (isPhoto && targetPhoto) {
+          void deleteGuestPhotoRemote(targetPhoto, album, profile);
+      }
+  }
+
+function clearGuestViewerIfAlbumMatches(albumId) {
+      if (!guestCenterState.viewer.open || !Array.isArray(guestCenterState.viewer.items)) {
+          return;
+      }
+
+      const matchesAlbum = guestCenterState.viewer.items.some((item) => item && item.albumId === albumId);
+
+      if (!matchesAlbum) {
+          return;
+      }
+
+      guestCenterState.viewer = {
+          open: false,
+          items: [],
+          index: 0,
+          title: ""
+      };
+
+      document.removeEventListener("keydown", handleGuestViewerKeydown);
 }
 
-function renderAdminCenterSection() {
-    const catalog = getAdminFilteredAlbums(adminCenterState.searchQuery);
-    const albumsPagination = getGuestPaginationWindow(catalog, adminCenterState.albumsPage, 10);
-    adminCenterState.albumsPage = albumsPagination.currentPage;
+function removeGuestAlbum(albumId) {
+      const storedAlbums = getStoredGuestAlbums();
+      const targetAlbum = storedAlbums.find((album) => album.id === albumId);
+
+      if (!targetAlbum) {
+          return null;
+      }
+
+      (targetAlbum.photos || []).forEach((photo) => {
+          if (photo && (photo.objectUrl || photo.src)) {
+              window.URL.revokeObjectURL(photo.objectUrl || photo.src);
+          }
+      });
+
+      if (targetAlbum.video && (targetAlbum.video.objectUrl || targetAlbum.video.src)) {
+          window.URL.revokeObjectURL(targetAlbum.video.objectUrl || targetAlbum.video.src);
+      }
+
+      clearGuestViewerIfAlbumMatches(albumId);
+
+      const nextAlbums = storedAlbums.filter((album) => album.id !== albumId);
+      saveStoredGuestAlbums(nextAlbums);
+      renderAlbumsSection();
+
+      return targetAlbum;
+}
+
+async function deleteGuestAlbumRemote(targetAlbum, profile) {
+      const firebaseApi = await getFirebaseGuestAlbumApi();
+
+      if (!firebaseApi) {
+          showToast("No se pudo sincronizar la eliminaciÃ³n con Firebase. El cambio quedÃ³ en este dispositivo.", "error");
+          return;
+      }
+
+      if (!targetAlbum || !targetAlbum.id) {
+          return;
+      }
+
+      try {
+          const paths = getGuestAlbumFirestorePath(targetAlbum.id);
+          const albumRef = firebaseApi.doc(firebaseApi.firestore, ...paths.albumDocPath);
+          const photosCollectionRef = firebaseApi.collection(firebaseApi.firestore, ...paths.photosCollectionPath);
+          const snapshot = await firebaseApi.getDocs(photosCollectionRef);
+
+          if (!snapshot.empty) {
+              for (const docSnapshot of snapshot.docs) {
+                  const photoRecord = docSnapshot.data() || {};
+                  const storagePath = photoRecord.storagePath || `events/${recuerdosEventId}/albums/${targetAlbum.id}/photos/${docSnapshot.id}.jpg`;
+
+                  if (storagePath) {
+                      try {
+                          await firebaseApi.deleteObject(firebaseApi.ref(firebaseApi.storage, storagePath));
+                      } catch (storageError) {
+                          console.warn("[Recuerdos] No se pudo eliminar una fotografÃ­a de un Ã¡lbum de invitados en Storage.", storageError);
+                      }
+                  }
+
+                  try {
+                      await firebaseApi.deleteDoc(firebaseApi.doc(firebaseApi.firestore, ...paths.photosCollectionPath, docSnapshot.id));
+                  } catch (docError) {
+                      console.warn("[Recuerdos] No se pudo eliminar una fotografÃ­a de un Ã¡lbum de invitados en Firestore.", docError);
+                  }
+              }
+          }
+
+          if (targetAlbum.video && targetAlbum.video.storagePath) {
+              try {
+                  await firebaseApi.deleteObject(firebaseApi.ref(firebaseApi.storage, targetAlbum.video.storagePath));
+              } catch (videoStorageError) {
+                  console.warn("[Recuerdos] No se pudo eliminar el video de un Ã¡lbum de invitados en Storage.", videoStorageError);
+              }
+          }
+
+          await firebaseApi.deleteDoc(albumRef);
+      } catch (error) {
+          console.error("[Recuerdos] No se pudo eliminar un Ã¡lbum de invitados en Firebase.", error);
+          showToast("No se pudo sincronizar la eliminaciÃ³n con Firebase. El Ã¡lbum se mantuvo visible en este dispositivo.", "error");
+      }
+}
+
+  function renderAdminCenterSection() {
+      const catalog = getAdminFilteredAlbums(adminCenterState.searchQuery);
+      const albumsPagination = getGuestPaginationWindow(catalog, adminCenterState.albumsPage, 10);
+      adminCenterState.albumsPage = albumsPagination.currentPage;
     const albumSummary = catalog.length ? `${albumsPagination.currentPage} de ${albumsPagination.totalPages}` : "0 de 0";
     const albumAccentClasses = ["accent-rose", "accent-lavender", "accent-sand", "accent-plum"];
 
@@ -5096,19 +5202,24 @@ function renderAdminCenterSection() {
                 </div>
             </div>
 
-            <div id="guest-albums-grid" class="guest-albums-grid" aria-live="polite">
-                ${albumsPagination.items.map((album, index) => {
-                    const accentClass = album.accentClass || albumAccentClasses[index % albumAccentClasses.length];
-                    return `
-                        <button class="guest-album-item ${escapeHTML(accentClass)}" type="button" data-guest-album-id="${escapeHTML(album.id)}">
-                            <span class="guest-album-initials" aria-hidden="true">
-                                <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
-                            </span>
-                            <span class="guest-album-name">${escapeHTML(album.ownerName)}</span>
-                        </button>
-                    `;
-                }).join("")}
-            </div>
+              <div id="guest-albums-grid" class="guest-albums-grid" aria-live="polite">
+                  ${albumsPagination.items.map((album, index) => {
+                      const accentClass = album.accentClass || albumAccentClasses[index % albumAccentClasses.length];
+                      return `
+                          <div style="position: relative;">
+                              <button class="guest-album-item ${escapeHTML(accentClass)}" type="button" data-guest-album-id="${escapeHTML(album.id)}">
+                                  <span class="guest-album-initials" aria-hidden="true">
+                                      <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+                                  </span>
+                                  <span class="guest-album-name">${escapeHTML(album.ownerName)}</span>
+                              </button>
+                              <button class="guest-personal-delete-btn" type="button" data-guest-action="delete-guest-album" data-guest-target-album-id="${escapeHTML(album.id)}" aria-label="Eliminar álbum de ${escapeHTML(album.ownerName)}">
+                                  <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                              </button>
+                          </div>
+                      `;
+                  }).join("")}
+              </div>
 
             <div id="guest-albums-pagination" class="guest-pagination" ${albumsPagination.totalPages > 1 ? "" : "hidden"}>
                 <button class="guest-pagination-btn" type="button" data-guest-action="albums-page-prev" aria-label="Página anterior">Anterior</button>
@@ -5121,16 +5232,18 @@ function renderAdminCenterSection() {
     `;
 }
 
-function bindAdminAlbumInteractions() {
-    const searchInput = document.getElementById("guest-album-search");
-    const grid = document.getElementById("guest-albums-grid");
-    const albumsPagination = document.getElementById("guest-albums-pagination");
-    const viewer = document.getElementById("guest-media-viewer");
+  function bindAdminAlbumInteractions() {
+      const searchInput = document.getElementById("guest-album-search");
+      const grid = document.getElementById("guest-albums-grid");
+      const albumsPagination = document.getElementById("guest-albums-pagination");
+      const viewer = document.getElementById("guest-media-viewer");
+      const profile = getStoredAccessProfile();
+      const isAdmin = profile && profile.type === "admin";
 
-    if (searchInput) {
-        searchInput.oninput = (event) => {
-            adminCenterState.searchQuery = event.target.value;
-            adminCenterState.albumsPage = 1;
+      if (searchInput) {
+          searchInput.oninput = (event) => {
+              adminCenterState.searchQuery = event.target.value;
+              adminCenterState.albumsPage = 1;
             renderAlbumsSection();
         };
     }
@@ -5161,20 +5274,49 @@ function bindAdminAlbumInteractions() {
         }
     }
 
-    if (grid) {
-        grid.querySelectorAll("[data-guest-album-id]").forEach((card) => {
-            card.addEventListener("click", () => {
-                const albumId = card.dataset.guestAlbumId;
-                if (albumId) {
-                    openGuestMediaFromAlbum(albumId, 0);
-                }
-            });
-        });
-    }
+      if (grid) {
+          grid.querySelectorAll("[data-guest-album-id]").forEach((card) => {
+              card.addEventListener("click", () => {
+                  const albumId = card.dataset.guestAlbumId;
+                  if (albumId) {
+                      openGuestMediaFromAlbum(albumId, 0);
+                  }
+              });
+          });
 
-    if (viewer) {
-        let touchStartX = 0;
-        let touchStartY = 0;
+          grid.querySelectorAll('[data-guest-action="delete-guest-album"]').forEach((button) => {
+              button.addEventListener("click", (event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+
+                  if (!isAdmin) {
+                      showToast("No tenés permisos para eliminar este álbum.", "error");
+                      return;
+                  }
+
+                  const albumId = button.dataset.guestTargetAlbumId;
+                  if (!albumId) {
+                      return;
+                  }
+
+                  const targetAlbum = getStoredGuestAlbums().find((album) => album.id === albumId) || null;
+                  const albumName = targetAlbum ? targetAlbum.ownerName : "este álbum";
+
+                  if (!window.confirm(`¿Querés eliminar el álbum de ${albumName}?`)) {
+                      return;
+                  }
+
+                  const removedAlbum = removeGuestAlbum(albumId);
+                  if (removedAlbum) {
+                      void deleteGuestAlbumRemote(removedAlbum, profile);
+                  }
+              });
+          });
+      }
+
+      if (viewer) {
+          let touchStartX = 0;
+          let touchStartY = 0;
 
         viewer.querySelectorAll("[data-guest-action]").forEach((button) => {
             button.addEventListener("click", () => {
