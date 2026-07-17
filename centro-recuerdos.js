@@ -1946,6 +1946,10 @@ function closeAccessModal() {
 
     accessModal.hidden = true;
     document.body.classList.remove("modal-open");
+
+    if (typeof window.initMusicPlayerUI === "function") {
+        window.initMusicPlayerUI();
+    }
 }
 
 function showAccessFeedback(message) {
@@ -2061,6 +2065,9 @@ function showAccessWelcome(profile = getStoredAccessProfile()) {
 
 function showAccessSuccess(profile = getStoredAccessProfile()) {
     setAccessView("success", profile);
+    if (typeof window.initMusicPlayerUI === "function") {
+        window.initMusicPlayerUI();
+    }
 }
 
 function renderRecuerdosAppShell() {
@@ -2078,6 +2085,22 @@ function renderRecuerdosAppShell() {
             <div class="recuerdos-hero-actions">
                 <button id="change-user-btn" class="btn-rectangular btn-secundario" type="button">Cambiar de usuario</button>
                 <a class="btn-rectangular" href="index.html">Volver a la invitación</a>
+            </div>
+
+            <div class="music-player">
+                <div class="player-track-info">
+                    <span id="player-track-title" class="track-title">Cargando...</span>
+                    <span id="player-track-artist" class="track-artist">Cargando...</span>
+                </div>
+                <div class="player-controls">
+                    <button id="player-prev-btn" class="btn-player-control" type="button" aria-label="Pista anterior"><i class="fa-solid fa-backward-step"></i></button>
+                    <button id="play-music-btn" class="btn-player-play" type="button" aria-label="Reproducir o pausar"><i class="fa-solid fa-pause"></i></button>
+                    <button id="player-next-btn" class="btn-player-control" type="button" aria-label="Siguiente pista"><i class="fa-solid fa-forward-step"></i></button>
+                </div>
+                <div class="player-volume-container">
+                    <i class="fa-solid fa-volume-high" id="player-volume-icon" aria-label="Silenciar"></i>
+                    <input type="range" id="player-volume-slider" min="0" max="1" step="0.05" value="1" class="volume-slider" aria-label="Volumen">
+                </div>
             </div>
         </header>
 
@@ -2101,6 +2124,10 @@ function renderRecuerdosAppShell() {
     const changeUserBtn = document.getElementById("change-user-btn");
     if (changeUserBtn) {
         changeUserBtn.addEventListener("click", handleChangeUser);
+    }
+
+    if (typeof window.initMusicPlayerUI === "function") {
+        window.initMusicPlayerUI();
     }
 }
 
@@ -6427,9 +6454,14 @@ function renderGuestPersonalAlbumPreview() {
     }
 }
 
-function openGuestPresentation() {
+async function openGuestPresentation() {
     const profile = getStoredAccessProfile();
-    const catalog = getGuestPublicAlbums(profile);
+    const currentAlbum = getOrCreateCurrentGuestAlbum();
+    const catalog = [currentAlbum, ...getGuestPublicAlbums(profile)].filter(Boolean);
+
+    const promises = catalog.map((album) => loadGuestAlbumPhotosIfNeeded(album.id));
+    await Promise.all(promises);
+
     const items = catalog.flatMap((album) => getGuestAlbumMediaItems(album));
 
     if (!items.length) {
