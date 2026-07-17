@@ -27,11 +27,15 @@ const recuerdosDemoData = {
 
 const accessStorageKey = "centroRecuerdosAccess";
 const albumStorageKey = "centroRecuerdosAlbums";
-const wallStorageKey = "centroRecuerdosWallMessages";
 const deviceStorageKey = "centroRecuerdosDeviceId";
 const recuerdosEventId = recuerdosConfig.access.eventCode.toLowerCase();
 let accessSessionVersion = 0;
 const enableFirestoreUserSync = true;
+const wallMessagesState = {
+    items: [],
+    loading: false,
+    requestId: 0
+};
 
 function generatePersistentId(prefix) {
     if (window.crypto && typeof window.crypto.randomUUID === "function") {
@@ -370,7 +374,18 @@ function buildGuestAlbumFirestoreRecord(album, profile, overrides = {}) {
         coverPhotoId: normalizedAlbum.coverPhotoId || null,
         coverPhotoUrl: normalizedAlbum.coverPhotoUrl || null,
         photoCount: typeof normalizedAlbum.photoCount === "number" ? normalizedAlbum.photoCount : (Array.isArray(normalizedAlbum.photos) ? normalizedAlbum.photos.length : 0),
-        videoCount: typeof normalizedAlbum.videoCount === "number" ? normalizedAlbum.videoCount : (normalizedAlbum.video ? 1 : 0)
+        videoCount: typeof normalizedAlbum.videoCount === "number" ? normalizedAlbum.videoCount : (normalizedAlbum.video ? 1 : 0),
+        video: normalizedAlbum.video ? {
+            id: normalizedAlbum.video.id,
+            kind: "video",
+            name: normalizedAlbum.video.name,
+            src: normalizedAlbum.video.src,
+            createdAt: normalizedAlbum.video.createdAt,
+            fileName: normalizedAlbum.video.fileName,
+            mimeType: normalizedAlbum.video.mimeType,
+            storagePath: normalizedAlbum.video.storagePath,
+            downloadUrl: normalizedAlbum.video.downloadUrl
+        } : null
     };
 }
 
@@ -675,22 +690,14 @@ function clearAccessProfile() {
     officialAlbumState.guestRefreshAttempted = false;
 }
 
+let legacyAlbumsInMemory = [];
+
 function getStoredAlbums() {
-    const storedAlbums = localStorage.getItem(albumStorageKey);
-
-    if (!storedAlbums) {
-        return [];
-    }
-
-    try {
-        return JSON.parse(storedAlbums);
-    } catch (error) {
-        return [];
-    }
+    return legacyAlbumsInMemory || [];
 }
 
 function saveAlbums(albums) {
-    localStorage.setItem(albumStorageKey, JSON.stringify(albums));
+    legacyAlbumsInMemory = albums || [];
 }
 
 function createOfficialAlbumItem(source, origin = "seed") {
@@ -1615,49 +1622,243 @@ function getWallColorPalette() {
 
 function normalizeWallMessage(message, index = 0) {
     const palette = getWallColorPalette();
+    const normalizedColor = palette.some((color) => color.key === message.color)
+        ? message.color
+        : palette[index % palette.length].key;
+
     return {
         id: message.id || "wall-" + Date.now() + "-" + index,
         author: message.author || "Invitado",
         ownerKey: message.ownerKey || "visitor",
+        role: message.role || "guest",
         createdAt: message.createdAt || new Date().toISOString(),
+        editedAt: message.editedAt || null,
         text: message.text || "",
-        color: message.color || palette[index % palette.length].key
+        color: normalizedColor
     };
 }
 
-function isDemoWallMessage(message) {
-    const author = normalizeDisplayName(message && message.author);
-    const ownerKey = String(message && message.ownerKey || "");
-    const messageId = String(message && message.id || "");
+function getWallMessagesCollectionPath() {
+    return ["events", recuerdosEventId, "messages"];
+}
 
-    return ownerKey.startsWith("seed-")
-        || messageId.startsWith("seed-")
-        || ["mica", "juli", "familia", "amigos"].includes(author);
+function getWallMessageDocumentId(messageId) {
+    return String(messageId || "").trim();
+}
+
+async function getFirebaseWallApi() {
+    const firebaseState = window.recuerdosFirebase || null;
+    const firestoreHelpers = window.recuerdosFirebaseFirestoreHelpers || null;
+
+    if (firebaseState && firebaseState.configured && firebaseState.firestore && firestoreHelpers && firestoreHelpers.collection && firestoreHelpers.deleteDoc && firestoreHelpers.doc && firestoreHelpers.getDocs && firestoreHelpers.setDoc) {
+        return {
+            firestore: firebaseState.firestore,
+            ...firestoreHelpers
+        };
+    }
+
+    try {
+        const firebaseModule = await import("./firebase-config.js");
+        const resolvedState = firebaseModule.initializeFirebase();
+        const resolvedHelpers = firebaseModule.getFirebaseFirestoreHelpers();
+
+        if (!resolvedState || !resolvedState.configured || !resolvedState.firestore || !resolvedHelpers || !resolvedHelpers.collection || !resolvedHelpers.deleteDoc || !resolvedHelpers.doc || !resolvedHelpers.getDocs || !resolvedHelpers.setDoc) {
+            return null;
+        }
+
+        return {
+            firestore: resolvedState.firestore,
+            ...resolvedHelpers
+        };
+    } catch (error) {
+        console.error("[Recuerdos] No se pudo preparar Firestore para el muro de comentarios.", error);
+        return null;
+    }
+}
+
+function buildWallMessageRecord(profile, text, overrides = {}) {
+    const normalizedProfile = normalizeAccessProfile(profile);
+
+    if (!normalizedProfile) {
+        return null;
+    }
+
+    return normalizeWallMessage({
+        id: overrides.id || getWallMessageDocumentId(overrides.id || generatePersistentId("wall")),
+        author: overrides.author || getCurrentWallAuthor(normalizedProfile),
+        ownerKey: overrides.ownerKey || getWallSessionKey(normalizedProfile),
+        role: overrides.role || normalizedProfile.role,
+        createdAt: overrides.createdAt || new Date().toISOString(),
+        editedAt: overrides.editedAt || null,
+        text: typeof text === "string" ? text.trim() : "",
+        color: overrides.color || recuerdosAppState.messageColor
+    });
+}
+
+function sortWallMessages(messages) {
+    return messages.slice().sort((left, right) => {
+        const leftTime = new Date(left.createdAt || 0).getTime();
+        const rightTime = new Date(right.createdAt || 0).getTime();
+
+        if (Number.isNaN(leftTime) && Number.isNaN(rightTime)) {
+            return String(right.id || "").localeCompare(String(left.id || ""));
+        }
+
+        if (Number.isNaN(leftTime)) {
+            return 1;
+        }
+
+        if (Number.isNaN(rightTime)) {
+            return -1;
+        }
+
+        if (leftTime !== rightTime) {
+            return rightTime - leftTime;
+        }
+
+        return String(right.id || "").localeCompare(String(left.id || ""));
+    });
+}
+
+async function loadWallMessagesFromFirestore() {
+    const firebaseApi = await getFirebaseWallApi();
+
+    if (!firebaseApi) {
+        return [];
+    }
+
+    const messagesCollectionRef = firebaseApi.collection(firebaseApi.firestore, ...getWallMessagesCollectionPath());
+    const snapshot = await firebaseApi.getDocs(messagesCollectionRef);
+
+    if (!snapshot || snapshot.empty) {
+        return [];
+    }
+
+    const messages = snapshot.docs.map((docSnapshot, index) => normalizeWallMessage({
+        id: docSnapshot.id,
+        ...docSnapshot.data()
+    }, index));
+
+    return sortWallMessages(messages);
+}
+
+async function refreshWallMessagesFromFirestore({ render = true } = {}) {
+    const requestId = wallMessagesState.requestId + 1;
+    wallMessagesState.requestId = requestId;
+    wallMessagesState.loading = true;
+
+    try {
+        const messages = await loadWallMessagesFromFirestore();
+
+        if (requestId !== wallMessagesState.requestId) {
+            return messages;
+        }
+
+        wallMessagesState.items = messages;
+        return messages;
+    } catch (error) {
+        console.error("[Recuerdos] No se pudo leer el muro desde Firestore.", error);
+
+        if (requestId === wallMessagesState.requestId) {
+            wallMessagesState.items = [];
+        }
+
+        return [];
+    } finally {
+        if (requestId === wallMessagesState.requestId) {
+            wallMessagesState.loading = false;
+        }
+
+        if (render && requestId === wallMessagesState.requestId) {
+            renderMessageBoardCards();
+        }
+    }
+}
+
+async function createWallMessageInFirestore(profile, text) {
+    const normalizedProfile = normalizeAccessProfile(profile);
+
+    if (!normalizedProfile || normalizedProfile.type !== "guest") {
+        return null;
+    }
+
+    const firebaseApi = await getFirebaseWallApi();
+
+    if (!firebaseApi) {
+        return null;
+    }
+
+    const messageId = generatePersistentId("wall");
+    const messageRecord = buildWallMessageRecord(normalizedProfile, text, {
+        id: messageId
+    });
+
+    if (!messageRecord) {
+        return null;
+    }
+
+    const messageRef = firebaseApi.doc(firebaseApi.firestore, ...getWallMessagesCollectionPath(), messageId);
+    await firebaseApi.setDoc(messageRef, messageRecord, { merge: true });
+    return messageRecord;
+}
+
+async function updateWallMessageInFirestore(message, profile, text) {
+    const normalizedProfile = normalizeAccessProfile(profile);
+
+    if (!normalizedProfile || normalizedProfile.type !== "guest") {
+        return null;
+    }
+
+    const messageId = getWallMessageDocumentId(message && message.id);
+
+    if (!messageId) {
+        return null;
+    }
+
+    const firebaseApi = await getFirebaseWallApi();
+
+    if (!firebaseApi) {
+        return null;
+    }
+
+    const nextRecord = normalizeWallMessage({
+        ...message,
+        text: text.trim(),
+        editedAt: new Date().toISOString()
+    });
+    const messageRef = firebaseApi.doc(firebaseApi.firestore, ...getWallMessagesCollectionPath(), messageId);
+    await firebaseApi.setDoc(messageRef, nextRecord, { merge: true });
+    return nextRecord;
+}
+
+async function deleteWallMessageFromFirestore(messageId) {
+    const normalizedMessageId = getWallMessageDocumentId(messageId);
+
+    if (!normalizedMessageId) {
+        return false;
+    }
+
+    const firebaseApi = await getFirebaseWallApi();
+
+    if (!firebaseApi) {
+        return false;
+    }
+
+    await firebaseApi.deleteDoc(firebaseApi.doc(firebaseApi.firestore, ...getWallMessagesCollectionPath(), normalizedMessageId));
+    return true;
 }
 
 function getStoredWallMessages() {
-    const storedMessages = localStorage.getItem(wallStorageKey);
-
-    if (storedMessages) {
-        try {
-            const normalizedMessages = JSON.parse(storedMessages).map((message, index) => normalizeWallMessage(message, index));
-            const cleanedMessages = normalizedMessages.filter((message) => !isDemoWallMessage(message));
-
-            if (cleanedMessages.length !== normalizedMessages.length) {
-                saveWallMessages(cleanedMessages);
-            }
-
-            return cleanedMessages;
-        } catch (error) {
-            return [];
-        }
-    }
-
-    return [];
+    return wallMessagesState.items.slice();
 }
 
 function saveWallMessages(messages) {
-    localStorage.setItem(wallStorageKey, JSON.stringify(messages.map((message, index) => normalizeWallMessage(message, index))));
+    const normalizedMessages = Array.isArray(messages)
+        ? messages.map((message, index) => normalizeWallMessage(message, index))
+        : [];
+
+    wallMessagesState.items = sortWallMessages(normalizedMessages);
+    return wallMessagesState.items;
 }
 
 function formatWallTimestamp(isoDate) {
@@ -1745,6 +1946,10 @@ function closeAccessModal() {
 
     accessModal.hidden = true;
     document.body.classList.remove("modal-open");
+
+    if (typeof window.initMusicPlayerUI === "function") {
+        window.initMusicPlayerUI();
+    }
 }
 
 function showAccessFeedback(message) {
@@ -1860,6 +2065,9 @@ function showAccessWelcome(profile = getStoredAccessProfile()) {
 
 function showAccessSuccess(profile = getStoredAccessProfile()) {
     setAccessView("success", profile);
+    if (typeof window.initMusicPlayerUI === "function") {
+        window.initMusicPlayerUI();
+    }
 }
 
 function renderRecuerdosAppShell() {
@@ -1877,6 +2085,22 @@ function renderRecuerdosAppShell() {
             <div class="recuerdos-hero-actions">
                 <button id="change-user-btn" class="btn-rectangular btn-secundario" type="button">Cambiar de usuario</button>
                 <a class="btn-rectangular" href="index.html">Volver a la invitación</a>
+            </div>
+
+            <div class="music-player">
+                <div class="player-track-info">
+                    <span id="player-track-title" class="track-title">Cargando...</span>
+                    <span id="player-track-artist" class="track-artist">Cargando...</span>
+                </div>
+                <div class="player-controls">
+                    <button id="player-prev-btn" class="btn-player-control" type="button" aria-label="Pista anterior"><i class="fa-solid fa-backward-step"></i></button>
+                    <button id="play-music-btn" class="btn-player-play" type="button" aria-label="Reproducir o pausar"><i class="fa-solid fa-pause"></i></button>
+                    <button id="player-next-btn" class="btn-player-control" type="button" aria-label="Siguiente pista"><i class="fa-solid fa-forward-step"></i></button>
+                </div>
+                <div class="player-volume-container">
+                    <i class="fa-solid fa-volume-high" id="player-volume-icon" aria-label="Silenciar"></i>
+                    <input type="range" id="player-volume-slider" min="0" max="1" step="0.05" value="1" class="volume-slider" aria-label="Volumen">
+                </div>
             </div>
         </header>
 
@@ -1900,6 +2124,10 @@ function renderRecuerdosAppShell() {
     const changeUserBtn = document.getElementById("change-user-btn");
     if (changeUserBtn) {
         changeUserBtn.addEventListener("click", handleChangeUser);
+    }
+
+    if (typeof window.initMusicPlayerUI === "function") {
+        window.initMusicPlayerUI();
     }
 }
 
@@ -2763,32 +2991,33 @@ function renderMessageBoardSection() {
     const colorSelector = document.getElementById("message-color-selector");
 
     if (composerButton) {
-        composerButton.addEventListener("click", () => {
+        composerButton.addEventListener("click", async () => {
             const text = composerInput ? composerInput.value.trim() : "";
 
             if (!text) {
-                showToast("Escribí un mensaje para dejar tu saludo.", "default");
+                showToast("EscribÃ­ un mensaje para dejar tu saludo.", "default");
                 return;
             }
 
-            const messages = getStoredWallMessages();
-            messages.unshift({
-                id: "wall-" + Date.now(),
-                author: getCurrentWallAuthor(profile),
-                ownerKey: getWallSessionKey(profile),
-                createdAt: new Date().toISOString(),
-                text,
-                color: recuerdosAppState.messageColor
-            });
+            if (!profile || profile.type !== "guest") {
+                showToast("IngresÃ¡ para dejar tu saludo.", "default");
+                return;
+            }
 
-            saveWallMessages(messages);
+            try {
+                await createWallMessageInFirestore(profile, text);
+            } catch (error) {
+                console.error("[Recuerdos] No se pudo publicar el mensaje en Firestore.", error);
+                showToast("No pudimos publicar tu saludo.", "error");
+                return;
+            }
 
             if (composerInput) {
                 composerInput.value = "";
             }
 
-            renderMessageBoardCards();
-            showToast("Tu saludo quedó publicado.", "success");
+            await refreshWallMessagesFromFirestore();
+            showToast("Tu saludo quedÃ³ publicado.", "success");
         });
     }
 
@@ -2810,7 +3039,7 @@ function renderMessageBoardSection() {
         });
     }
 
-    renderMessageBoardCards();
+    void refreshWallMessagesFromFirestore();
 }
 
 function renderMessageBoardCards() {
@@ -2823,22 +3052,22 @@ function renderMessageBoardCards() {
     const profile = getStoredAccessProfile();
     const currentOwnerKey = getWallSessionKey(profile);
     const isAdmin = profile && profile.type === "admin";
-    const messages = getStoredWallMessages();
+    const messages = wallMessagesState.items;
 
     if (!messages.length) {
         boardElement.innerHTML = `
             <article class="message-note accent-sand">
                 <div class="message-note-head">
-                    <strong class="message-note-author">Todavía no hay comentarios</strong>
+                    <strong class="message-note-author">TodavÃ­a no hay comentarios</strong>
                 </div>
-                <p class="message-note-text">Cuando existan mensajes reales, van a aparecer aquí.</p>
+                <p class="message-note-text">Cuando existan mensajes reales, van a aparecer aquÃ­.</p>
             </article>
         `;
         return;
     }
 
     boardElement.innerHTML = messages.map((message) => {
-        const canEditMessage = message.ownerKey === currentOwnerKey && currentOwnerKey !== "visitor";
+        const canEditMessage = profile && profile.type === "guest" && message.ownerKey === currentOwnerKey;
         const canDeleteMessage = canEditMessage || isAdmin;
 
         return `
@@ -2867,16 +3096,16 @@ function renderMessageBoardCards() {
                 return;
             }
 
-            handleWallAction(action, messageId);
+            void handleWallAction(action, messageId);
         });
     });
 }
 
-function handleWallAction(action, messageId) {
+async function handleWallAction(action, messageId) {
     const profile = getStoredAccessProfile();
     const currentOwnerKey = getWallSessionKey(profile);
     const isAdmin = profile && profile.type === "admin";
-    const messages = getStoredWallMessages();
+    const messages = wallMessagesState.items;
     const messageIndex = messages.findIndex((message) => message.id === messageId);
 
     if (messageIndex === -1) {
@@ -2884,7 +3113,7 @@ function handleWallAction(action, messageId) {
     }
 
     const message = messages[messageIndex];
-    const canEditMessage = message.ownerKey === currentOwnerKey && currentOwnerKey !== "visitor";
+    const canEditMessage = profile && profile.type === "guest" && message.ownerKey === currentOwnerKey;
     const canDeleteMessage = canEditMessage || isAdmin;
 
     if (action === "delete") {
@@ -2896,9 +3125,13 @@ function handleWallAction(action, messageId) {
             return;
         }
 
-        messages.splice(messageIndex, 1);
-        saveWallMessages(messages);
-        renderMessageBoardCards();
+        try {
+            await deleteWallMessageFromFirestore(messageId);
+            await refreshWallMessagesFromFirestore();
+        } catch (error) {
+            console.error("[Recuerdos] No se pudo eliminar el mensaje desde Firestore.", error);
+            showToast("No pudimos eliminar el mensaje.", "error");
+        }
         return;
     }
 
@@ -2920,30 +3153,13 @@ function handleWallAction(action, messageId) {
             return;
         }
 
-        messages[messageIndex] = {
-            ...message,
-            text: trimmedText
-        };
-
-        saveWallMessages(messages);
-        renderMessageBoardCards();
-    }
-}
-
-function initializeToastInteractions() {
-    const photosButton = document.getElementById("personal-upload-photos-btn");
-    const videoButton = document.getElementById("personal-upload-video-btn");
-
-    if (photosButton) {
-        photosButton.addEventListener("click", () => {
-            simulatePersonalUpload("Fotos");
-        });
-    }
-
-    if (videoButton) {
-        videoButton.addEventListener("click", () => {
-            simulatePersonalUpload("Video");
-        });
+        try {
+            await updateWallMessageInFirestore(message, profile, trimmedText);
+            await refreshWallMessagesFromFirestore();
+        } catch (error) {
+            console.error("[Recuerdos] No se pudo editar el mensaje en Firestore.", error);
+            showToast("No pudimos actualizar el mensaje.", "error");
+        }
     }
 }
 
@@ -3135,7 +3351,10 @@ const guestCenterState = {
         items: [],
         index: 0,
         title: ""
-    }
+    },
+    albums: [],
+    firebaseLoading: false,
+    firebaseLoaded: false
 };
 
 const adminCenterState = {
@@ -3228,21 +3447,217 @@ function getGuestPaginationWindow(items, page, pageSize) {
 }
 
 function getStoredGuestAlbums() {
-    const rawAlbums = localStorage.getItem(guestAlbumsStorageKey);
-
-    if (!rawAlbums) {
-        return [];
-    }
-
-    try {
-        return JSON.parse(rawAlbums).map((album) => normalizeGuestAlbumRecord(album)).filter(Boolean);
-    } catch (error) {
-        return [];
-    }
+    return guestCenterState.albums || [];
 }
 
 function saveStoredGuestAlbums(albums) {
-    localStorage.setItem(guestAlbumsStorageKey, JSON.stringify(albums.map((album) => normalizeGuestAlbumRecord(album)).filter(Boolean)));
+    guestCenterState.albums = (albums || []).map((album) => normalizeGuestAlbumRecord(album)).filter(Boolean);
+}
+
+async function loadGuestAlbumsFromFirebase(force = false) {
+    if (guestCenterState.firebaseLoading || (guestCenterState.firebaseLoaded && !force)) {
+        return;
+    }
+
+    guestCenterState.firebaseLoading = true;
+
+    const firebaseApi = await getFirebaseGuestAlbumApi();
+
+    if (!firebaseApi) {
+        guestCenterState.firebaseLoading = false;
+        guestCenterState.firebaseLoaded = true;
+        return;
+    }
+
+    try {
+        const albumsCollectionRef = firebaseApi.collection(firebaseApi.firestore, "events", recuerdosEventId, "albums");
+        const albumsSnapshot = await firebaseApi.getDocs(albumsCollectionRef);
+        
+        if (albumsSnapshot.empty) {
+            saveStoredGuestAlbums([]);
+            guestCenterState.firebaseLoaded = true;
+            guestCenterState.firebaseLoading = false;
+            renderAlbumsSection();
+            return;
+        }
+
+        const guestAlbums = albumsSnapshot.docs.map((docSnapshot) => {
+            const albumData = docSnapshot.data();
+            if (albumData.albumType !== "guest") {
+                return null;
+            }
+            const albumId = docSnapshot.id;
+
+            const existingAlbum = guestCenterState.albums.find(a => a.id === albumId);
+            const photos = existingAlbum ? existingAlbum.photos : [];
+
+            return normalizeGuestAlbumRecord({
+                id: albumId,
+                ownerName: albumData.ownerName || "Invitado",
+                ownerType: albumData.ownerType || "guest",
+                ownerUserId: albumData.ownerUserId || null,
+                albumType: "guest",
+                title: albumData.title || albumData.ownerName,
+                createdAt: albumData.createdAt,
+                lastActivityAt: albumData.lastActivityAt,
+                coverPhotoId: albumData.coverPhotoId,
+                coverPhotoUrl: albumData.coverPhotoUrl,
+                photoCount: typeof albumData.photoCount === "number" ? albumData.photoCount : photos.length,
+                photos: photos,
+                video: albumData.video ? normalizeGuestMediaItem(albumData.video, "video") : null,
+                videoCount: typeof albumData.videoCount === "number" ? albumData.videoCount : (albumData.video ? 1 : 0)
+            });
+        }).filter(Boolean);
+
+        saveStoredGuestAlbums(guestAlbums);
+
+        guestCenterState.firebaseLoaded = true;
+        guestCenterState.firebaseLoading = false;
+        renderAlbumsSection();
+    } catch (error) {
+        guestCenterState.firebaseLoading = false;
+        guestCenterState.firebaseLoaded = true;
+        console.error("[Recuerdos] No se pudo cargar los Álbumes de Invitados desde Firebase.", error);
+        showToast("No se pudieron cargar los álbumes compartidos de Firebase. Se muestran los recuerdos en memoria.", "error");
+    }
+}
+
+async function loadGuestAlbumPhotosIfNeeded(albumId) {
+    const album = guestCenterState.albums.find(a => a.id === albumId);
+    if (!album) {
+        return;
+    }
+
+    if ((album.photos && album.photos.length > 0) || !album.photoCount) {
+        return;
+    }
+
+    const firebaseApi = await getFirebaseGuestAlbumApi();
+    if (!firebaseApi) {
+        return;
+    }
+
+    try {
+        const paths = getGuestAlbumFirestorePath(albumId);
+        const photosCollectionRef = firebaseApi.collection(firebaseApi.firestore, ...paths.photosCollectionPath);
+        const photosSnapshot = await firebaseApi.getDocs(photosCollectionRef);
+        
+        const photos = photosSnapshot.docs.map((photoDoc) => {
+            const photoData = photoDoc.data();
+            return normalizeGuestMediaItem({
+                ...photoData,
+                id: photoDoc.id,
+                src: photoData.downloadUrl || photoData.src || ""
+            }, "photo");
+        }).filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        album.photos = photos;
+        album.photoCount = photos.length;
+    } catch (error) {
+        console.error(`[Recuerdos] No se pudieron cargar las fotos del álbum ${albumId} desde Firebase.`, error);
+    }
+}
+
+async function persistGuestVideoUpload(videoItem, file) {
+    const firebaseApi = await getFirebaseGuestAlbumApi();
+    const profile = getStoredAccessProfile();
+    const album = getOrCreateCurrentGuestAlbum();
+
+    if (!firebaseApi || !profile || !album) {
+        showToast("No se pudo guardar el video en Firebase. El video sigue visible en este dispositivo.", "error");
+        return;
+    }
+
+    const paths = getGuestAlbumFirestorePath(album.id);
+    const albumRef = firebaseApi.doc(firebaseApi.firestore, ...paths.albumDocPath);
+
+    setGuestUploadProgress({
+        active: true,
+        completed: 0,
+        total: 1,
+        label: "Subiendo video",
+        fileName: file.name
+    });
+    renderAlbumsSection();
+
+    try {
+        const storagePath = `events/${recuerdosEventId}/albums/${album.id}/video/${videoItem.id}-${file.name}`;
+        const storageRef = firebaseApi.ref(firebaseApi.storage, storagePath);
+        const uploadTask = firebaseApi.uploadBytesResumable(storageRef, file, {
+            contentType: file.type
+        });
+
+        const uploadSnapshot = await new Promise((resolve, reject) => {
+            uploadTask.on(
+                "state_changed",
+                (snapshot) => {
+                    const totalBytes = snapshot.totalBytes || file.size || 1;
+                    const fileProgress = totalBytes > 0 ? snapshot.bytesTransferred / totalBytes : 0;
+                    setGuestUploadProgress({
+                        completed: fileProgress,
+                        total: 1,
+                        fileName: file.name
+                    });
+                    renderAlbumsSection();
+                },
+                (error) => reject(error),
+                () => resolve(uploadTask.snapshot)
+            );
+        });
+
+        const downloadUrl = await firebaseApi.getDownloadURL(uploadSnapshot.ref);
+
+        if (!album.video || album.video.id !== videoItem.id) {
+            await firebaseApi.deleteObject(storageRef);
+            return;
+        }
+
+        album.video.src = downloadUrl;
+        album.video.downloadUrl = downloadUrl;
+        album.video.storagePath = storagePath;
+        album.videoCount = 1;
+
+        const storedAlbums = getStoredGuestAlbums();
+        const nextAlbums = storedAlbums.map((entry) => entry.id === album.id ? album : entry);
+        saveStoredGuestAlbums(nextAlbums);
+
+        await firebaseApi.setDoc(albumRef, buildGuestAlbumFirestoreRecord(album, profile), { merge: true });
+
+        showToast("Video guardado en Firebase.", "success");
+    } catch (error) {
+        console.error("[Recuerdos] No se pudo guardar el video en Firebase.", error);
+        showToast("No se pudo subir el video a Firebase. El video sigue visible en este dispositivo.", "error");
+    } finally {
+        resetGuestUploadProgress();
+        renderAlbumsSection();
+    }
+}
+
+async function deleteGuestVideoRemote(targetVideo, album, profile) {
+    const firebaseApi = await getFirebaseGuestAlbumApi();
+
+    if (!firebaseApi) {
+        showToast("No se pudo sincronizar la eliminación con Firebase. El cambio quedó en este dispositivo.", "error");
+        return;
+    }
+
+    const paths = getGuestAlbumFirestorePath(album.id);
+    const albumRef = firebaseApi.doc(firebaseApi.firestore, ...paths.albumDocPath);
+
+    try {
+        if (targetVideo.storagePath) {
+            await firebaseApi.deleteObject(firebaseApi.ref(firebaseApi.storage, targetVideo.storagePath));
+        }
+
+        const storedAlbums = getStoredGuestAlbums();
+        const nextAlbums = storedAlbums.map((item) => item.id === album.id ? album : item);
+        saveStoredGuestAlbums(nextAlbums);
+
+        await firebaseApi.setDoc(albumRef, buildGuestAlbumFirestoreRecord(album, profile), { merge: true });
+    } catch (error) {
+        console.error("[Recuerdos] No se pudo eliminar el video de Mi Álbum en Firebase.", error);
+        showToast("No se pudo sincronizar la eliminación con Firebase. El video se mantiene visible en este dispositivo.", "error");
+    }
 }
 
 function getCurrentGuestAlbum(profile = getStoredAccessProfile()) {
@@ -3673,8 +4088,10 @@ function removeGuestMedia(mediaId) {
     renderAlbumsSection();
 }
 
-function openGuestMediaFromAlbum(albumId, startIndex = 0) {
+async function openGuestMediaFromAlbum(albumId, startIndex = 0) {
     const profile = getStoredAccessProfile();
+    await loadGuestAlbumPhotosIfNeeded(albumId);
+
     const album = albumId === (profile && profile.albumId)
         ? getOrCreateCurrentGuestAlbum()
         : [...getGuestPublicAlbums(profile), getOrCreateCurrentGuestAlbum()].find((item) => item && item.id === albumId);
@@ -3687,10 +4104,14 @@ function openGuestMediaFromAlbum(albumId, startIndex = 0) {
     openGuestViewer(items, startIndex, album.ownerName);
 }
 
-function openGuestPresentation() {
+async function openGuestPresentation() {
     const profile = getStoredAccessProfile();
     const currentAlbum = getOrCreateCurrentGuestAlbum();
     const catalog = [currentAlbum, ...getGuestPublicAlbums(profile)].filter(Boolean);
+
+    const promises = catalog.map((album) => loadGuestAlbumPhotosIfNeeded(album.id));
+    await Promise.all(promises);
+
     const items = catalog.flatMap((album) => getGuestAlbumMediaItems(album));
 
     if (!items.length) {
@@ -5000,6 +5421,8 @@ function addGuestVideo(file) {
     saveStoredGuestAlbums(nextAlbums);
     renderAlbumsSection();
     showToast("Tu video quedó agregado al álbum.", "success");
+
+    void persistGuestVideoUpload(album.video, file);
 }
 
 async function deleteGuestPhotoRemote(targetPhoto, album, profile) {
@@ -5038,6 +5461,7 @@ function removeGuestMedia(mediaId) {
       const album = getOrCreateCurrentGuestAlbum();
       const profile = getStoredAccessProfile();
       let targetPhoto = null;
+      let targetVideo = null;
 
     if (!album || !mediaId) {
         return;
@@ -5058,8 +5482,11 @@ function removeGuestMedia(mediaId) {
         album.photos = album.photos.filter((photo) => photo.id !== mediaId);
     }
 
-    if (isVideo && album.video && album.video.objectUrl) {
-        window.URL.revokeObjectURL(album.video.objectUrl);
+    if (isVideo && album.video) {
+        targetVideo = album.video;
+        if (targetVideo.objectUrl || targetVideo.src) {
+            window.URL.revokeObjectURL(targetVideo.objectUrl || targetVideo.src);
+        }
         album.video = null;
     }
 
@@ -5075,6 +5502,10 @@ function removeGuestMedia(mediaId) {
 
       if (isPhoto && targetPhoto) {
           void deleteGuestPhotoRemote(targetPhoto, album, profile);
+      }
+
+      if (isVideo && targetVideo) {
+          void deleteGuestVideoRemote(targetVideo, album, profile);
       }
   }
 
@@ -5455,6 +5886,10 @@ function renderAlbumsSection() {
 
     if (!section) {
         return;
+    }
+
+    if (!guestCenterState.firebaseLoaded && !guestCenterState.firebaseLoading) {
+        void loadGuestAlbumsFromFirebase();
     }
 
     const profile = getStoredAccessProfile();
@@ -6019,9 +6454,14 @@ function renderGuestPersonalAlbumPreview() {
     }
 }
 
-function openGuestPresentation() {
+async function openGuestPresentation() {
     const profile = getStoredAccessProfile();
-    const catalog = getGuestPublicAlbums(profile);
+    const currentAlbum = getOrCreateCurrentGuestAlbum();
+    const catalog = [currentAlbum, ...getGuestPublicAlbums(profile)].filter(Boolean);
+
+    const promises = catalog.map((album) => loadGuestAlbumPhotosIfNeeded(album.id));
+    await Promise.all(promises);
+
     const items = catalog.flatMap((album) => getGuestAlbumMediaItems(album));
 
     if (!items.length) {
