@@ -3739,6 +3739,7 @@ async function resolvePersonalAlbumForSession(profile) {
         return album;
     } catch (error) {
         console.error("[Recuerdos] Error al resolver el álbum del usuario.", error);
+        guestCenterState.personalAlbumLoaded = true;
         return null;
     }
 }
@@ -5861,10 +5862,15 @@ function renderAlbumsSection() {
 
     if (isGuest && !guestCenterState.personalAlbumLoaded && !guestCenterState.personalAlbumLoading) {
         guestCenterState.personalAlbumLoading = true;
-        resolvePersonalAlbumForSession(profile).then(() => {
-            guestCenterState.personalAlbumLoading = false;
-            renderAlbumsSection();
-        });
+        resolvePersonalAlbumForSession(profile)
+            .catch((err) => {
+                console.error("[Recuerdos] Fallo crítico al resolver álbum de sesión:", err);
+                guestCenterState.personalAlbumLoaded = true;
+            })
+            .finally(() => {
+                guestCenterState.personalAlbumLoading = false;
+                renderAlbumsSection();
+            });
         return;
     }
 

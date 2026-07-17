@@ -8,7 +8,8 @@ import {
     getFirestore,
     orderBy,
     query,
-    setDoc
+    setDoc,
+    where
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import {
     deleteObject,
@@ -91,7 +92,8 @@ export function getFirebaseFirestoreHelpers() {
         getDocs,
         orderBy,
         query,
-        setDoc
+        setDoc,
+        where
     };
 }
 
