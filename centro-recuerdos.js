@@ -79,10 +79,13 @@ function normalizeAccessProfile(profile) {
         ? (profile.displayName || profile.name || "")
         : (profile.displayName || profile.name || "Administrador");
     const deviceId = profile.deviceId || getOrCreateDeviceId();
-    const fallbackUserId = role === "guest" ? `guest-${deviceId}` : deviceId;
-    const userId = role === "guest" && profile.userId === deviceId
+    const normalizedName = normalizeDisplayName(displayName);
+    const fallbackUserId = role === "guest" ? `guest-${normalizedName}` : deviceId;
+    const currentUserId = profile.userId;
+    const isLegacyUserId = currentUserId === deviceId || currentUserId === `guest-${deviceId}` || (currentUserId && currentUserId.includes(`-${deviceId}-`)) || (currentUserId && currentUserId.startsWith(`guest-${deviceId}-`));
+    const userId = (role === "guest" && (isLegacyUserId || !currentUserId))
         ? fallbackUserId
-        : (profile.userId || fallbackUserId);
+        : (currentUserId || fallbackUserId);
 
     return {
         ...profile,
@@ -685,19 +688,21 @@ function getStoredAccessProfile() {
 function clearAccessProfile() {
     localStorage.removeItem(accessStorageKey);
     invalidateAccessSession();
+    clearPersonalAlbumContext();
+
+    guestCenterState.albums = [];
+    guestCenterState.firebaseLoaded = false;
 
     const officialAlbumState = recuerdosAppState.officialAlbum;
     officialAlbumState.guestRefreshAttempted = false;
 }
 
-let legacyAlbumsInMemory = [];
-
 function getStoredAlbums() {
-    return legacyAlbumsInMemory || [];
+    return getStoredGuestAlbums();
 }
 
 function saveAlbums(albums) {
-    legacyAlbumsInMemory = albums || [];
+    saveStoredGuestAlbums(albums);
 }
 
 function createOfficialAlbumItem(source, origin = "seed") {
@@ -1877,53 +1882,7 @@ function formatWallTimestamp(isoDate) {
 }
 
 function ensurePersonalAlbum(guestName) {
-    const normalizedName = guestName.trim();
-    const profile = getStoredAccessProfile();
-    const albums = getStoredAlbums().map((album) => normalizeGuestAlbumRecord(album));
-    let existingAlbum = null;
-
-    if (profile && profile.type === "guest" && profile.albumId) {
-        existingAlbum = albums.find((album) => album.id === profile.albumId) || null;
-    }
-
-    if (!existingAlbum) {
-        existingAlbum = albums.find((album) => album.ownerType === "guest" && album.ownerName === normalizedName) || null;
-    }
-
-    if (existingAlbum) {
-        if (profile && profile.type === "guest" && profile.albumId !== existingAlbum.id) {
-            const nextProfile = {
-                ...profile,
-                albumId: existingAlbum.id
-            };
-            saveAccessProfile(nextProfile);
-        }
-
-        saveAlbums(albums.map((album) => normalizeGuestAlbumRecord(album)));
-        return existingAlbum;
-    }
-
-    const newAlbum = normalizeGuestAlbumRecord({
-        id: generateGuestAlbumId(),
-        ownerName: normalizedName,
-        ownerType: "guest",
-        createdAt: new Date().toISOString(),
-        photos: [],
-        video: null
-    });
-
-    albums.push(newAlbum);
-    saveAlbums(albums);
-
-    if (profile && profile.type === "guest") {
-        const nextProfile = {
-            ...profile,
-            albumId: newAlbum.id
-        };
-        saveAccessProfile(nextProfile);
-    }
-
-    return newAlbum;
+    return getCurrentUserGuestAlbum();
 }
 
 function openAccessModal() {
@@ -2563,7 +2522,7 @@ function handleChangeUser() {
     renderAll();
 }
 
-function handleGuestAccess(event) {
+async function handleGuestAccess(event) {
     event.preventDefault();
 
     const guestName = document.getElementById("guest-name");
@@ -2587,7 +2546,7 @@ function handleGuestAccess(event) {
         lastSeenAt: now
     });
 
-    ensurePersonalAlbum(profile.name);
+    await resolvePersonalAlbumForSession(profile);
     updateLandingContent();
     renderAll();
     showAccessSuccess(profile);
@@ -3354,7 +3313,10 @@ const guestCenterState = {
     },
     albums: [],
     firebaseLoading: false,
-    firebaseLoaded: false
+    firebaseLoaded: false,
+    personalAlbum: null,
+    personalAlbumLoaded: false,
+    personalAlbumLoading: false
 };
 
 const adminCenterState = {
@@ -3511,6 +3473,15 @@ async function loadGuestAlbumsFromFirebase(force = false) {
 
         saveStoredGuestAlbums(guestAlbums);
 
+        const profile = getStoredAccessProfile();
+        if (profile && profile.type === "guest" && profile.name) {
+            const myRealAlbum = guestAlbums.find((a) => a.ownerUserId === profile.userId || a.ownerName === profile.name);
+            if (myRealAlbum && profile.albumId !== myRealAlbum.id) {
+                profile.albumId = myRealAlbum.id;
+                saveAccessProfile(profile);
+            }
+        }
+
         guestCenterState.firebaseLoaded = true;
         guestCenterState.firebaseLoading = false;
         renderAlbumsSection();
@@ -3523,7 +3494,7 @@ async function loadGuestAlbumsFromFirebase(force = false) {
 }
 
 async function loadGuestAlbumPhotosIfNeeded(albumId) {
-    const album = guestCenterState.albums.find(a => a.id === albumId);
+    const album = guestCenterState.albums.find(a => a.id === albumId) || (guestCenterState.personalAlbum && guestCenterState.personalAlbum.id === albumId ? guestCenterState.personalAlbum : null);
     if (!album) {
         return;
     }
@@ -3660,40 +3631,129 @@ async function deleteGuestVideoRemote(targetVideo, album, profile) {
     }
 }
 
-function getCurrentGuestAlbum(profile = getStoredAccessProfile()) {
+function clearPersonalAlbumContext() {
+    guestCenterState.personalAlbum = null;
+    guestCenterState.personalAlbumLoaded = false;
+    const listElement = document.getElementById("guest-personal-media-list");
+    if (listElement) {
+        listElement.innerHTML = "";
+    }
+}
+
+async function resolvePersonalAlbumForSession(profile) {
     if (!profile || profile.type !== "guest" || !profile.name) {
+        clearPersonalAlbumContext();
         return null;
     }
 
-    const storedAlbums = getStoredGuestAlbums();
-    const byId = profile.albumId ? storedAlbums.find((album) => album.id === profile.albumId) : null;
-
-    if (byId) {
-        return byId;
+    if (guestCenterState.personalAlbumLoaded && guestCenterState.personalAlbum && guestCenterState.personalAlbum.ownerUserId === profile.userId) {
+        return guestCenterState.personalAlbum;
     }
 
-    const byName = storedAlbums.find((album) => album.ownerName === profile.name && album.ownerType === "guest");
-
-    if (byName) {
-        return byName;
+    const firebaseApi = await getFirebaseGuestAlbumApi();
+    if (!firebaseApi) {
+        return null;
     }
 
-    return normalizeGuestAlbumRecord({
-        id: profile.albumId || generateGuestId("guest-album"),
-        ownerName: profile.name,
-        ownerType: "guest",
-        ownerUserId: profile.userId || getOrCreateDeviceId(),
-        albumType: "guest",
-        title: profile.name,
-        createdAt: new Date().toISOString(),
-        lastActivityAt: new Date().toISOString(),
-        coverPhotoId: null,
-        coverPhotoUrl: null,
-        photoCount: 0,
-        photos: [],
-        video: null,
-        videoCount: 0
-    });
+    try {
+        const albumsRef = firebaseApi.collection(firebaseApi.firestore, "events", recuerdosEventId, "albums");
+        
+        const q = firebaseApi.query(
+            albumsRef,
+            firebaseApi.where("ownerUserId", "==", profile.userId)
+        );
+        const querySnapshot = await firebaseApi.getDocs(q);
+
+        let albumDoc = null;
+        if (!querySnapshot.empty) {
+            albumDoc = querySnapshot.docs[0];
+        } else {
+            const qName = firebaseApi.query(
+                albumsRef,
+                firebaseApi.where("ownerName", "==", profile.name),
+                firebaseApi.where("ownerType", "==", "guest")
+            );
+            const querySnapshotName = await firebaseApi.getDocs(qName);
+            if (!querySnapshotName.empty) {
+                albumDoc = querySnapshotName.docs[0];
+            }
+        }
+
+        let album = null;
+        if (albumDoc) {
+            const data = albumDoc.data();
+            album = normalizeGuestAlbumRecord({
+                id: albumDoc.id,
+                ...data
+            });
+            
+            if (album.ownerUserId !== profile.userId) {
+                album.ownerUserId = profile.userId;
+                const docRef = firebaseApi.doc(firebaseApi.firestore, "events", recuerdosEventId, "albums", album.id);
+                await firebaseApi.setDoc(docRef, { ownerUserId: profile.userId }, { merge: true });
+            }
+        } else {
+            const newAlbumId = generateGuestId("guest-album");
+            album = normalizeGuestAlbumRecord({
+                id: newAlbumId,
+                ownerName: profile.name,
+                ownerType: "guest",
+                ownerUserId: profile.userId,
+                albumType: "guest",
+                title: profile.name,
+                createdAt: new Date().toISOString(),
+                lastActivityAt: new Date().toISOString(),
+                coverPhotoId: null,
+                coverPhotoUrl: null,
+                photoCount: 0,
+                photos: [],
+                video: null,
+                videoCount: 0
+            });
+
+            const docRef = firebaseApi.doc(firebaseApi.firestore, "events", recuerdosEventId, "albums", newAlbumId);
+            await firebaseApi.setDoc(docRef, buildGuestAlbumFirestoreRecord(album, profile));
+        }
+
+        const photosCollectionRef = firebaseApi.collection(firebaseApi.firestore, "events", recuerdosEventId, "albums", album.id, "photos");
+        const photosSnapshot = await firebaseApi.getDocs(photosCollectionRef);
+        
+        album.photos = photosSnapshot.docs.map((photoDoc) => {
+            const photoData = photoDoc.data();
+            return normalizeGuestMediaItem({
+                ...photoData,
+                id: photoDoc.id,
+                src: photoData.downloadUrl || photoData.src || ""
+            }, "photo");
+        }).filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0));
+        
+        album.photoCount = album.photos.length;
+
+        if (profile.albumId !== album.id) {
+            profile.albumId = album.id;
+            saveAccessProfile(profile);
+        }
+
+        guestCenterState.personalAlbum = album;
+        guestCenterState.personalAlbumLoaded = true;
+        return album;
+    } catch (error) {
+        console.error("[Recuerdos] Error al resolver el álbum del usuario.", error);
+        guestCenterState.personalAlbumLoaded = true;
+        return null;
+    }
+}
+
+function getCurrentUserGuestAlbum() {
+    return guestCenterState.personalAlbum;
+}
+
+function getCurrentGuestAlbum(profile = getStoredAccessProfile()) {
+    return guestCenterState.personalAlbum;
+}
+
+function getOrCreateCurrentGuestAlbum() {
+    return guestCenterState.personalAlbum;
 }
 
 function getGuestPublicAlbums(profile = getStoredAccessProfile()) {
@@ -3878,98 +3938,7 @@ function updateGuestProfileAlbumId(album) {
     void syncAccessProfileWithFirestore(nextProfile);
 }
 
-function getOrCreateCurrentGuestAlbum() {
-    const profile = getStoredAccessProfile();
 
-    if (!profile || profile.type !== "guest" || !profile.name) {
-        return null;
-    }
-
-    const storedAlbums = getStoredGuestAlbums();
-    let album = getCurrentGuestAlbum(profile);
-
-    if (album && storedAlbums.find((item) => item.id === album.id)) {
-        return album;
-    }
-
-    if (album && !storedAlbums.find((item) => item.id === album.id)) {
-        storedAlbums.push(album);
-        saveStoredGuestAlbums(storedAlbums);
-        updateGuestProfileAlbumId(album);
-        return album;
-    }
-
-    album = normalizeGuestAlbumRecord({
-        id: generateGuestId("guest-album"),
-        ownerName: profile.name,
-        ownerType: "guest",
-        createdAt: new Date().toISOString(),
-        photos: [],
-        video: null
-    });
-
-    storedAlbums.push(album);
-    saveStoredGuestAlbums(storedAlbums);
-    updateGuestProfileAlbumId(album);
-    return album;
-}
-
-function renderGuestPersonalAlbumPreview() {
-    const titleElement = document.getElementById("personal-album-title");
-    const descriptionElement = document.getElementById("personal-album-description");
-    const listElement = document.getElementById("guest-personal-media-list");
-    const emptyStateElement = document.getElementById("guest-personal-empty-state");
-    const profile = getStoredAccessProfile();
-    const album = getOrCreateCurrentGuestAlbum();
-
-    if (!titleElement || !descriptionElement || !listElement || !emptyStateElement) {
-        return;
-    }
-
-    const isGuest = profile && profile.type === "guest" && profile.name;
-    const photoCount = album ? (album.photos || []).length : 0;
-    const hasVideo = Boolean(album && album.video);
-    const hasContent = Boolean(photoCount || hasVideo);
-
-    titleElement.textContent = isGuest ? `Mi Álbum - ${profile.name}` : "Mi Álbum";
-    descriptionElement.textContent = hasContent
-        ? "Tus recuerdos ya están guardados en este álbum."
-        : "Sumá fotografías y un video para armar tu álbum personal.";
-
-    const items = [
-        ...(album && album.photos ? album.photos.map((photo, index) => ({
-            ...normalizeGuestMediaItem(photo, "photo"),
-            displayName: photo.name || `Foto ${index + 1}`
-        })) : []),
-        ...(album && album.video ? [{
-            ...normalizeGuestMediaItem(album.video, "video"),
-            displayName: album.video.name || "Video"
-        }] : [])
-    ];
-
-    listElement.innerHTML = hasContent ? items.map((item, index) => `
-        <article class="guest-personal-media-item ${item.kind === "video" ? "is-video" : "is-photo"}">
-            <button class="guest-personal-media-visual" type="button" data-guest-action="open-personal-media" data-guest-media-index="${index}" aria-label="Abrir ${escapeHTML(item.displayName)}">
-                ${item.kind === "video" ? `
-                    <span class="guest-personal-media-play"><i class="fa-solid fa-play" aria-hidden="true"></i></span>
-                ` : `
-                    <img src="${escapeHTML(item.src)}" alt="${escapeHTML(item.displayName)}">
-                `}
-            </button>
-            <div class="guest-personal-media-copy">
-                <p class="personal-media-kind">${item.kind === "video" ? "Video" : "Foto"}</p>
-                <h4 class="personal-media-title">${escapeHTML(item.displayName)}</h4>
-                <p class="personal-media-meta">${item.kind === "video" ? "Guardado en tu álbum" : "Guardada en tu álbum"}</p>
-            </div>
-            <button class="guest-personal-delete-btn" type="button" data-guest-action="delete-personal-media" data-guest-media-id="${escapeHTML(item.id)}" aria-label="Eliminar ${escapeHTML(item.displayName)}">
-                <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
-            </button>
-        </article>
-    `).join("") : "";
-
-    emptyStateElement.hidden = hasContent;
-    listElement.hidden = !hasContent;
-}
 
 function addGuestPhotos(files) {
     const imageFiles = Array.from(files || []).filter((file) => file && file.type && file.type.startsWith("image/"));
@@ -5888,12 +5857,26 @@ function renderAlbumsSection() {
         return;
     }
 
+    const profile = getStoredAccessProfile();
+    const isGuest = profile && profile.type === "guest" && profile.name;
+
+    if (isGuest && !guestCenterState.personalAlbumLoaded && !guestCenterState.personalAlbumLoading) {
+        guestCenterState.personalAlbumLoading = true;
+        resolvePersonalAlbumForSession(profile)
+            .catch((err) => {
+                console.error("[Recuerdos] Fallo crítico al resolver álbum de sesión:", err);
+                guestCenterState.personalAlbumLoaded = true;
+            })
+            .finally(() => {
+                guestCenterState.personalAlbumLoading = false;
+                renderAlbumsSection();
+            });
+        return;
+    }
+
     if (!guestCenterState.firebaseLoaded && !guestCenterState.firebaseLoading) {
         void loadGuestAlbumsFromFirebase();
     }
-
-    const profile = getStoredAccessProfile();
-    const isGuest = profile && profile.type === "guest" && profile.name;
 
     section.className = "section bg-lavanda recuerdos-center-section";
 
