@@ -27,11 +27,15 @@ const recuerdosDemoData = {
 
 const accessStorageKey = "centroRecuerdosAccess";
 const albumStorageKey = "centroRecuerdosAlbums";
-const wallStorageKey = "centroRecuerdosWallMessages";
 const deviceStorageKey = "centroRecuerdosDeviceId";
 const recuerdosEventId = recuerdosConfig.access.eventCode.toLowerCase();
 let accessSessionVersion = 0;
 const enableFirestoreUserSync = true;
+const wallMessagesState = {
+    items: [],
+    loading: false,
+    requestId: 0
+};
 
 function generatePersistentId(prefix) {
     if (window.crypto && typeof window.crypto.randomUUID === "function") {
@@ -1615,49 +1619,243 @@ function getWallColorPalette() {
 
 function normalizeWallMessage(message, index = 0) {
     const palette = getWallColorPalette();
+    const normalizedColor = palette.some((color) => color.key === message.color)
+        ? message.color
+        : palette[index % palette.length].key;
+
     return {
         id: message.id || "wall-" + Date.now() + "-" + index,
         author: message.author || "Invitado",
         ownerKey: message.ownerKey || "visitor",
+        role: message.role || "guest",
         createdAt: message.createdAt || new Date().toISOString(),
+        editedAt: message.editedAt || null,
         text: message.text || "",
-        color: message.color || palette[index % palette.length].key
+        color: normalizedColor
     };
 }
 
-function isDemoWallMessage(message) {
-    const author = normalizeDisplayName(message && message.author);
-    const ownerKey = String(message && message.ownerKey || "");
-    const messageId = String(message && message.id || "");
+function getWallMessagesCollectionPath() {
+    return ["events", recuerdosEventId, "messages"];
+}
 
-    return ownerKey.startsWith("seed-")
-        || messageId.startsWith("seed-")
-        || ["mica", "juli", "familia", "amigos"].includes(author);
+function getWallMessageDocumentId(messageId) {
+    return String(messageId || "").trim();
+}
+
+async function getFirebaseWallApi() {
+    const firebaseState = window.recuerdosFirebase || null;
+    const firestoreHelpers = window.recuerdosFirebaseFirestoreHelpers || null;
+
+    if (firebaseState && firebaseState.configured && firebaseState.firestore && firestoreHelpers && firestoreHelpers.collection && firestoreHelpers.deleteDoc && firestoreHelpers.doc && firestoreHelpers.getDocs && firestoreHelpers.setDoc) {
+        return {
+            firestore: firebaseState.firestore,
+            ...firestoreHelpers
+        };
+    }
+
+    try {
+        const firebaseModule = await import("./firebase-config.js");
+        const resolvedState = firebaseModule.initializeFirebase();
+        const resolvedHelpers = firebaseModule.getFirebaseFirestoreHelpers();
+
+        if (!resolvedState || !resolvedState.configured || !resolvedState.firestore || !resolvedHelpers || !resolvedHelpers.collection || !resolvedHelpers.deleteDoc || !resolvedHelpers.doc || !resolvedHelpers.getDocs || !resolvedHelpers.setDoc) {
+            return null;
+        }
+
+        return {
+            firestore: resolvedState.firestore,
+            ...resolvedHelpers
+        };
+    } catch (error) {
+        console.error("[Recuerdos] No se pudo preparar Firestore para el muro de comentarios.", error);
+        return null;
+    }
+}
+
+function buildWallMessageRecord(profile, text, overrides = {}) {
+    const normalizedProfile = normalizeAccessProfile(profile);
+
+    if (!normalizedProfile) {
+        return null;
+    }
+
+    return normalizeWallMessage({
+        id: overrides.id || getWallMessageDocumentId(overrides.id || generatePersistentId("wall")),
+        author: overrides.author || getCurrentWallAuthor(normalizedProfile),
+        ownerKey: overrides.ownerKey || getWallSessionKey(normalizedProfile),
+        role: overrides.role || normalizedProfile.role,
+        createdAt: overrides.createdAt || new Date().toISOString(),
+        editedAt: overrides.editedAt || null,
+        text: typeof text === "string" ? text.trim() : "",
+        color: overrides.color || recuerdosAppState.messageColor
+    });
+}
+
+function sortWallMessages(messages) {
+    return messages.slice().sort((left, right) => {
+        const leftTime = new Date(left.createdAt || 0).getTime();
+        const rightTime = new Date(right.createdAt || 0).getTime();
+
+        if (Number.isNaN(leftTime) && Number.isNaN(rightTime)) {
+            return String(right.id || "").localeCompare(String(left.id || ""));
+        }
+
+        if (Number.isNaN(leftTime)) {
+            return 1;
+        }
+
+        if (Number.isNaN(rightTime)) {
+            return -1;
+        }
+
+        if (leftTime !== rightTime) {
+            return rightTime - leftTime;
+        }
+
+        return String(right.id || "").localeCompare(String(left.id || ""));
+    });
+}
+
+async function loadWallMessagesFromFirestore() {
+    const firebaseApi = await getFirebaseWallApi();
+
+    if (!firebaseApi) {
+        return [];
+    }
+
+    const messagesCollectionRef = firebaseApi.collection(firebaseApi.firestore, ...getWallMessagesCollectionPath());
+    const snapshot = await firebaseApi.getDocs(messagesCollectionRef);
+
+    if (!snapshot || snapshot.empty) {
+        return [];
+    }
+
+    const messages = snapshot.docs.map((docSnapshot, index) => normalizeWallMessage({
+        id: docSnapshot.id,
+        ...docSnapshot.data()
+    }, index));
+
+    return sortWallMessages(messages);
+}
+
+async function refreshWallMessagesFromFirestore({ render = true } = {}) {
+    const requestId = wallMessagesState.requestId + 1;
+    wallMessagesState.requestId = requestId;
+    wallMessagesState.loading = true;
+
+    try {
+        const messages = await loadWallMessagesFromFirestore();
+
+        if (requestId !== wallMessagesState.requestId) {
+            return messages;
+        }
+
+        wallMessagesState.items = messages;
+        return messages;
+    } catch (error) {
+        console.error("[Recuerdos] No se pudo leer el muro desde Firestore.", error);
+
+        if (requestId === wallMessagesState.requestId) {
+            wallMessagesState.items = [];
+        }
+
+        return [];
+    } finally {
+        if (requestId === wallMessagesState.requestId) {
+            wallMessagesState.loading = false;
+        }
+
+        if (render && requestId === wallMessagesState.requestId) {
+            renderMessageBoardCards();
+        }
+    }
+}
+
+async function createWallMessageInFirestore(profile, text) {
+    const normalizedProfile = normalizeAccessProfile(profile);
+
+    if (!normalizedProfile || normalizedProfile.type !== "guest") {
+        return null;
+    }
+
+    const firebaseApi = await getFirebaseWallApi();
+
+    if (!firebaseApi) {
+        return null;
+    }
+
+    const messageId = generatePersistentId("wall");
+    const messageRecord = buildWallMessageRecord(normalizedProfile, text, {
+        id: messageId
+    });
+
+    if (!messageRecord) {
+        return null;
+    }
+
+    const messageRef = firebaseApi.doc(firebaseApi.firestore, ...getWallMessagesCollectionPath(), messageId);
+    await firebaseApi.setDoc(messageRef, messageRecord, { merge: true });
+    return messageRecord;
+}
+
+async function updateWallMessageInFirestore(message, profile, text) {
+    const normalizedProfile = normalizeAccessProfile(profile);
+
+    if (!normalizedProfile || normalizedProfile.type !== "guest") {
+        return null;
+    }
+
+    const messageId = getWallMessageDocumentId(message && message.id);
+
+    if (!messageId) {
+        return null;
+    }
+
+    const firebaseApi = await getFirebaseWallApi();
+
+    if (!firebaseApi) {
+        return null;
+    }
+
+    const nextRecord = normalizeWallMessage({
+        ...message,
+        text: text.trim(),
+        editedAt: new Date().toISOString()
+    });
+    const messageRef = firebaseApi.doc(firebaseApi.firestore, ...getWallMessagesCollectionPath(), messageId);
+    await firebaseApi.setDoc(messageRef, nextRecord, { merge: true });
+    return nextRecord;
+}
+
+async function deleteWallMessageFromFirestore(messageId) {
+    const normalizedMessageId = getWallMessageDocumentId(messageId);
+
+    if (!normalizedMessageId) {
+        return false;
+    }
+
+    const firebaseApi = await getFirebaseWallApi();
+
+    if (!firebaseApi) {
+        return false;
+    }
+
+    await firebaseApi.deleteDoc(firebaseApi.doc(firebaseApi.firestore, ...getWallMessagesCollectionPath(), normalizedMessageId));
+    return true;
 }
 
 function getStoredWallMessages() {
-    const storedMessages = localStorage.getItem(wallStorageKey);
-
-    if (storedMessages) {
-        try {
-            const normalizedMessages = JSON.parse(storedMessages).map((message, index) => normalizeWallMessage(message, index));
-            const cleanedMessages = normalizedMessages.filter((message) => !isDemoWallMessage(message));
-
-            if (cleanedMessages.length !== normalizedMessages.length) {
-                saveWallMessages(cleanedMessages);
-            }
-
-            return cleanedMessages;
-        } catch (error) {
-            return [];
-        }
-    }
-
-    return [];
+    return wallMessagesState.items.slice();
 }
 
 function saveWallMessages(messages) {
-    localStorage.setItem(wallStorageKey, JSON.stringify(messages.map((message, index) => normalizeWallMessage(message, index))));
+    const normalizedMessages = Array.isArray(messages)
+        ? messages.map((message, index) => normalizeWallMessage(message, index))
+        : [];
+
+    wallMessagesState.items = sortWallMessages(normalizedMessages);
+    return wallMessagesState.items;
 }
 
 function formatWallTimestamp(isoDate) {
@@ -2763,32 +2961,33 @@ function renderMessageBoardSection() {
     const colorSelector = document.getElementById("message-color-selector");
 
     if (composerButton) {
-        composerButton.addEventListener("click", () => {
+        composerButton.addEventListener("click", async () => {
             const text = composerInput ? composerInput.value.trim() : "";
 
             if (!text) {
-                showToast("Escribí un mensaje para dejar tu saludo.", "default");
+                showToast("EscribÃ­ un mensaje para dejar tu saludo.", "default");
                 return;
             }
 
-            const messages = getStoredWallMessages();
-            messages.unshift({
-                id: "wall-" + Date.now(),
-                author: getCurrentWallAuthor(profile),
-                ownerKey: getWallSessionKey(profile),
-                createdAt: new Date().toISOString(),
-                text,
-                color: recuerdosAppState.messageColor
-            });
+            if (!profile || profile.type !== "guest") {
+                showToast("IngresÃ¡ para dejar tu saludo.", "default");
+                return;
+            }
 
-            saveWallMessages(messages);
+            try {
+                await createWallMessageInFirestore(profile, text);
+            } catch (error) {
+                console.error("[Recuerdos] No se pudo publicar el mensaje en Firestore.", error);
+                showToast("No pudimos publicar tu saludo.", "error");
+                return;
+            }
 
             if (composerInput) {
                 composerInput.value = "";
             }
 
-            renderMessageBoardCards();
-            showToast("Tu saludo quedó publicado.", "success");
+            await refreshWallMessagesFromFirestore();
+            showToast("Tu saludo quedÃ³ publicado.", "success");
         });
     }
 
@@ -2810,7 +3009,7 @@ function renderMessageBoardSection() {
         });
     }
 
-    renderMessageBoardCards();
+    void refreshWallMessagesFromFirestore();
 }
 
 function renderMessageBoardCards() {
@@ -2823,22 +3022,22 @@ function renderMessageBoardCards() {
     const profile = getStoredAccessProfile();
     const currentOwnerKey = getWallSessionKey(profile);
     const isAdmin = profile && profile.type === "admin";
-    const messages = getStoredWallMessages();
+    const messages = wallMessagesState.items;
 
     if (!messages.length) {
         boardElement.innerHTML = `
             <article class="message-note accent-sand">
                 <div class="message-note-head">
-                    <strong class="message-note-author">Todavía no hay comentarios</strong>
+                    <strong class="message-note-author">TodavÃ­a no hay comentarios</strong>
                 </div>
-                <p class="message-note-text">Cuando existan mensajes reales, van a aparecer aquí.</p>
+                <p class="message-note-text">Cuando existan mensajes reales, van a aparecer aquÃ­.</p>
             </article>
         `;
         return;
     }
 
     boardElement.innerHTML = messages.map((message) => {
-        const canEditMessage = message.ownerKey === currentOwnerKey && currentOwnerKey !== "visitor";
+        const canEditMessage = profile && profile.type === "guest" && message.ownerKey === currentOwnerKey;
         const canDeleteMessage = canEditMessage || isAdmin;
 
         return `
@@ -2867,16 +3066,16 @@ function renderMessageBoardCards() {
                 return;
             }
 
-            handleWallAction(action, messageId);
+            void handleWallAction(action, messageId);
         });
     });
 }
 
-function handleWallAction(action, messageId) {
+async function handleWallAction(action, messageId) {
     const profile = getStoredAccessProfile();
     const currentOwnerKey = getWallSessionKey(profile);
     const isAdmin = profile && profile.type === "admin";
-    const messages = getStoredWallMessages();
+    const messages = wallMessagesState.items;
     const messageIndex = messages.findIndex((message) => message.id === messageId);
 
     if (messageIndex === -1) {
@@ -2884,7 +3083,7 @@ function handleWallAction(action, messageId) {
     }
 
     const message = messages[messageIndex];
-    const canEditMessage = message.ownerKey === currentOwnerKey && currentOwnerKey !== "visitor";
+    const canEditMessage = profile && profile.type === "guest" && message.ownerKey === currentOwnerKey;
     const canDeleteMessage = canEditMessage || isAdmin;
 
     if (action === "delete") {
@@ -2896,9 +3095,13 @@ function handleWallAction(action, messageId) {
             return;
         }
 
-        messages.splice(messageIndex, 1);
-        saveWallMessages(messages);
-        renderMessageBoardCards();
+        try {
+            await deleteWallMessageFromFirestore(messageId);
+            await refreshWallMessagesFromFirestore();
+        } catch (error) {
+            console.error("[Recuerdos] No se pudo eliminar el mensaje desde Firestore.", error);
+            showToast("No pudimos eliminar el mensaje.", "error");
+        }
         return;
     }
 
@@ -2920,30 +3123,13 @@ function handleWallAction(action, messageId) {
             return;
         }
 
-        messages[messageIndex] = {
-            ...message,
-            text: trimmedText
-        };
-
-        saveWallMessages(messages);
-        renderMessageBoardCards();
-    }
-}
-
-function initializeToastInteractions() {
-    const photosButton = document.getElementById("personal-upload-photos-btn");
-    const videoButton = document.getElementById("personal-upload-video-btn");
-
-    if (photosButton) {
-        photosButton.addEventListener("click", () => {
-            simulatePersonalUpload("Fotos");
-        });
-    }
-
-    if (videoButton) {
-        videoButton.addEventListener("click", () => {
-            simulatePersonalUpload("Video");
-        });
+        try {
+            await updateWallMessageInFirestore(message, profile, trimmedText);
+            await refreshWallMessagesFromFirestore();
+        } catch (error) {
+            console.error("[Recuerdos] No se pudo editar el mensaje en Firestore.", error);
+            showToast("No pudimos actualizar el mensaje.", "error");
+        }
     }
 }
 
