@@ -693,14 +693,12 @@ function clearAccessProfile() {
     officialAlbumState.guestRefreshAttempted = false;
 }
 
-let legacyAlbumsInMemory = [];
-
 function getStoredAlbums() {
-    return legacyAlbumsInMemory || [];
+    return getStoredGuestAlbums();
 }
 
 function saveAlbums(albums) {
-    legacyAlbumsInMemory = albums || [];
+    saveStoredGuestAlbums(albums);
 }
 
 function createOfficialAlbumItem(source, origin = "seed") {
