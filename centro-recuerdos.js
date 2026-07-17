@@ -1878,53 +1878,7 @@ function formatWallTimestamp(isoDate) {
 }
 
 function ensurePersonalAlbum(guestName) {
-    const normalizedName = guestName.trim();
-    const profile = getStoredAccessProfile();
-    const albums = getStoredAlbums().map((album) => normalizeGuestAlbumRecord(album));
-    let existingAlbum = null;
-
-    if (profile && profile.type === "guest" && profile.albumId) {
-        existingAlbum = albums.find((album) => album.id === profile.albumId) || null;
-    }
-
-    if (!existingAlbum) {
-        existingAlbum = albums.find((album) => album.ownerType === "guest" && album.ownerName === normalizedName) || null;
-    }
-
-    if (existingAlbum) {
-        if (profile && profile.type === "guest" && profile.albumId !== existingAlbum.id) {
-            const nextProfile = {
-                ...profile,
-                albumId: existingAlbum.id
-            };
-            saveAccessProfile(nextProfile);
-        }
-
-        saveAlbums(albums.map((album) => normalizeGuestAlbumRecord(album)));
-        return existingAlbum;
-    }
-
-    const newAlbum = normalizeGuestAlbumRecord({
-        id: generateGuestAlbumId(),
-        ownerName: normalizedName,
-        ownerType: "guest",
-        createdAt: new Date().toISOString(),
-        photos: [],
-        video: null
-    });
-
-    albums.push(newAlbum);
-    saveAlbums(albums);
-
-    if (profile && profile.type === "guest") {
-        const nextProfile = {
-            ...profile,
-            albumId: newAlbum.id
-        };
-        saveAccessProfile(nextProfile);
-    }
-
-    return newAlbum;
+    return getCurrentUserGuestAlbum();
 }
 
 function openAccessModal() {
@@ -3670,40 +3624,52 @@ async function deleteGuestVideoRemote(targetVideo, album, profile) {
     }
 }
 
-function getCurrentGuestAlbum(profile = getStoredAccessProfile()) {
+function getCurrentUserGuestAlbum() {
+    const profile = getStoredAccessProfile();
+
     if (!profile || profile.type !== "guest" || !profile.name) {
         return null;
     }
 
     const storedAlbums = getStoredGuestAlbums();
-    const byId = profile.albumId ? storedAlbums.find((album) => album.id === profile.albumId) : null;
+    let album = profile.albumId ? storedAlbums.find((a) => a.id === profile.albumId) : null;
 
-    if (byId) {
-        return byId;
+    if (!album) {
+        album = storedAlbums.find((a) => a.ownerName === profile.name && a.ownerType === "guest");
     }
 
-    const byName = storedAlbums.find((album) => album.ownerName === profile.name && album.ownerType === "guest");
+    if (!album) {
+        album = normalizeGuestAlbumRecord({
+            id: profile.albumId || generateGuestId("guest-album"),
+            ownerName: profile.name,
+            ownerType: "guest",
+            ownerUserId: profile.userId || `guest-${profile.deviceId}-${normalizeDisplayName(profile.name)}`,
+            albumType: "guest",
+            title: profile.name,
+            createdAt: new Date().toISOString(),
+            lastActivityAt: new Date().toISOString(),
+            coverPhotoId: null,
+            coverPhotoUrl: null,
+            photoCount: 0,
+            photos: [],
+            video: null,
+            videoCount: 0
+        });
 
-    if (byName) {
-        return byName;
+        storedAlbums.push(album);
+        saveStoredGuestAlbums(storedAlbums);
     }
 
-    return normalizeGuestAlbumRecord({
-        id: profile.albumId || generateGuestId("guest-album"),
-        ownerName: profile.name,
-        ownerType: "guest",
-        ownerUserId: profile.userId || getOrCreateDeviceId(),
-        albumType: "guest",
-        title: profile.name,
-        createdAt: new Date().toISOString(),
-        lastActivityAt: new Date().toISOString(),
-        coverPhotoId: null,
-        coverPhotoUrl: null,
-        photoCount: 0,
-        photos: [],
-        video: null,
-        videoCount: 0
-    });
+    if (profile.albumId !== album.id) {
+        profile.albumId = album.id;
+        saveAccessProfile(profile);
+    }
+
+    return album;
+}
+
+function getCurrentGuestAlbum(profile = getStoredAccessProfile()) {
+    return getCurrentUserGuestAlbum();
 }
 
 function getGuestPublicAlbums(profile = getStoredAccessProfile()) {
@@ -3889,39 +3855,7 @@ function updateGuestProfileAlbumId(album) {
 }
 
 function getOrCreateCurrentGuestAlbum() {
-    const profile = getStoredAccessProfile();
-
-    if (!profile || profile.type !== "guest" || !profile.name) {
-        return null;
-    }
-
-    const storedAlbums = getStoredGuestAlbums();
-    let album = getCurrentGuestAlbum(profile);
-
-    if (album && storedAlbums.find((item) => item.id === album.id)) {
-        return album;
-    }
-
-    if (album && !storedAlbums.find((item) => item.id === album.id)) {
-        storedAlbums.push(album);
-        saveStoredGuestAlbums(storedAlbums);
-        updateGuestProfileAlbumId(album);
-        return album;
-    }
-
-    album = normalizeGuestAlbumRecord({
-        id: generateGuestId("guest-album"),
-        ownerName: profile.name,
-        ownerType: "guest",
-        createdAt: new Date().toISOString(),
-        photos: [],
-        video: null
-    });
-
-    storedAlbums.push(album);
-    saveStoredGuestAlbums(storedAlbums);
-    updateGuestProfileAlbumId(album);
-    return album;
+    return getCurrentUserGuestAlbum();
 }
 
 function renderGuestPersonalAlbumPreview() {
